@@ -16,7 +16,7 @@ self.addEventListener('install', (event) => {
       );
     })
   );
-  // Sofortige Aktivierung erzwingen, damit PWAs nicht auf den Neustart warten
+  // Sofortige Aktivierung erzwingen
   self.skipWaiting();
 });
 
@@ -32,7 +32,7 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  // Kontrolle über alle offenen Clients sofort übernehmen
+  // Kontrolle sofort übernehmen
   self.clients.claim();
 });
 
