@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.21    ================================================================================  -->
+<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.22 (inkl. 10-Seiten-Testsimulation)    ================================================================================  -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -43,9 +43,9 @@
         <div class="max-w-md mx-auto flex justify-between items-start">
             <div>
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
-                <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus (10-Seiten Test aktiv)</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.21</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.22</span>
         </div>
     </header>
 
@@ -56,17 +56,16 @@
         </div>
     </main>
 
-    <!-- Footer / Footer-Paginierung mit Inline-SVG-Pfeilen -->
+    <!-- Footer / Paginierung mit Inline-SVGs -->
     <footer class="bg-slate-800 border-t border-slate-700 p-3.5 sticky bottom-0 z-40">
         <div class="max-w-md mx-auto">
-            <!-- Paginierungs-Container mit vergrößerten Buttons & Inline-SVGs -->
             <div id="pagination-container" class="flex justify-between items-center gap-2 w-full">
                 <!-- Wird per JS befüllt -->
             </div>
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Stopp & Inline-SVG Footer -->
+    <!-- JavaScript: Live-Fetch, Parser, Audio-Stopp & 10-Seiten-Simulation -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -80,7 +79,6 @@
         const STORAGE_KEY_COMPLETED = "koettelmann_completed_episodes";
         const STORAGE_KEY_FAVORITES = "koettelmann_favorite_episodes";
 
-        // Hilfsfunktion zur Formatierung des Datums
         function formatFullDate(rawDateStr) {
             if (!rawDateStr) return '';
             const parts = rawDateStr.match(/(\d{2})\.(\d{2})\.(\d{4})/);
@@ -185,10 +183,6 @@
             }
         }
 
-        function isEpisodeFavorite(url) {
-            return getFavoriteEpisodes().includes(url);
-        }
-
         function loadPage(pageNum) {
             if (activeAudio) {
                 activeAudio.pause();
@@ -207,10 +201,16 @@
             fetchAndParseLiveWDR(targetUrl, pageNum);
         }
 
-        // Paginierung mit vergrößerten Buttons und Inline-SVG-Pfeilen (links/rechts)
+        // Paginierung mit 10-Seiten-Testsimulation
         function renderPagination(currentPage, totalPages) {
             const navContainer = document.getElementById('pagination-container');
             navContainer.innerHTML = '';
+
+            // TEST-SIMULATION: Erzwinge hier testweise 10 Seiten, um das Layout zu prüfen
+            const SIMULATE_TEN_PAGES = true;
+            if (SIMULATE_TEN_PAGES) {
+                totalPages = 10;
+            }
 
             if (totalPages <= 1) return;
 
@@ -229,7 +229,7 @@
             });
             navContainer.appendChild(prevButton);
 
-            // Innerer Container für Ziffern
+            // Innerer Container für Ziffern (max. 4 Elemente)
             const numbersWrapper = document.createElement('div');
             numbersWrapper.className = 'flex items-center gap-1.5 justify-center flex-grow mx-1';
 
@@ -300,7 +300,7 @@
             const loader = document.createElement('div');
             loader.id = 'loading-indicator';
             loader.className = 'text-center py-10 text-amber-400 text-sm font-medium animate-pulse';
-            loader.textContent = `Lade Live-Daten von der WDR-Mediathek...`;
+            loader.textContent = `Lade Live-Daten für Seite ${pageNum} (Simulation aktiv)...`;
             container.appendChild(loader);
 
             try {
@@ -312,26 +312,12 @@
                 const doc = parser.parseFromString(htmlText, 'text/html');
                 
                 const sourceBoxes = doc.querySelectorAll('.box');
-                
-                let totalPages = 1;
-                const pagingEntries = doc.querySelectorAll('.mod.ico.paging .labels .entry, .controls.paging .labels .entry, .paging .entry');
-                if (pagingEntries.length > 0) {
-                    totalPages = pagingEntries.length;
-                } else {
-                    doc.querySelectorAll('a[href*="_pageaudio-"]').forEach(a => {
-                        const match = a.href.match(/_pageaudio-(\d+)/);
-                        if (match) {
-                            const p = parseInt(match[1], 10);
-                            if (p > totalPages) totalPages = p;
-                        }
-                    });
-                }
 
                 loader.remove();
 
                 if (sourceBoxes.length === 0) {
                     container.innerHTML = `<div class="text-center text-slate-400 py-6 text-sm">Keine Episoden im DOM gefunden.</div>`;
-                    renderPagination(pageNum, totalPages);
+                    renderPagination(pageNum, 10);
                     return;
                 }
 
@@ -421,7 +407,7 @@
                     container.appendChild(card);
                 });
 
-                renderPagination(pageNum, totalPages);
+                renderPagination(pageNum, 10);
 
                 const allDetails = container.querySelectorAll('details.episode-details');
                 allDetails.forEach(details => {
