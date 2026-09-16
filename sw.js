@@ -1,23 +1,46 @@
-const CACHE_NAME = 'koettelmann-v0.0.1';
-const ASSETS = [
+// === KÖTTELMANN APP - Service Worker ===
+const CACHE_NAME = 'koettelmann-v30';
+const ASSETS_TO_CACHE = [
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './img/splash.jpg'
 ];
 
-// Installation & Caching
-self.addEventListener('install', (e) => {
-  e.waitUntil(
+self.addEventListener('install', (event) => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
 });
 
-// Fetch-Strategie
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request);
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  // Externe Requests (wie den Cloudflare-Worker / WDR-Daten) direkt durchlassen
+  if (event.request.url.includes('workers.dev')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Interne Assets aus Cache oder Netzwerk laden
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      return cachedResponse || fetch(event.request);
     })
   );
 });
