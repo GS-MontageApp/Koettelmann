@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.25 (Live-Modus & mitwanderndes Fenster)    ================================================================================  -->
+<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.26    ================================================================================  -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -45,7 +45,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.25</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.26</span>
         </div>
     </header>
 
@@ -56,7 +56,7 @@
         </div>
     </main>
 
-    <!-- Footer / Mitwandernde Paginierung mit Inline-SVGs -->
+    <!-- Footer / Mitwandernde Paginierung mit Amber-Rahmen -->
     <footer class="bg-slate-800 border-t border-slate-700 p-3.5 sticky bottom-0 z-40">
         <div class="max-w-md mx-auto">
             <div id="pagination-container" class="flex justify-between items-center gap-2 w-full">
@@ -65,7 +65,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Audio-Stopp & mitwandernde Live-Paginierung -->
+    <!-- JavaScript: Live-Fetch, Parser, Audio-Stopp & Live-Paginierung -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -206,7 +206,7 @@
             fetchAndParseLiveWDR(targetUrl, pageNum);
         }
 
-        // Mitwandernde Paginierungs-Logik (Sliding Window) für den echten Live-Betrieb
+        // Paginierung: Schiebefenster & Amber-Rahmen für anklickbare Buttons
         function renderPagination(currentPage, totalPages) {
             const navContainer = document.getElementById('pagination-container');
             navContainer.innerHTML = '';
@@ -215,10 +215,11 @@
 
             // 1. Linker Pfeil-Button mit Inline-SVG (←)
             const prevButton = document.createElement('button');
+            // Wenn klickbar: Amber-Rahmen (border-amber-500). Wenn deaktiviert: Dezenter Slate-Rahmen.
             prevButton.className = `px-5 py-3 rounded-xl transition flex items-center justify-center min-h-[44px] min-w-[50px] ${
                 currentPage <= 1 
-                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-800' 
-                    : 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:scale-95 shadow-sm'
+                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700/50' 
+                    : 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:scale-95 shadow-sm border border-amber-500'
             }`;
             prevButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>`;
             prevButton.disabled = currentPage <= 1;
@@ -249,7 +250,9 @@
                 const button = document.createElement('button');
                 const isActive = item === currentPage;
                 
-                button.className = `px-3.5 py-3 rounded-xl text-sm font-bold transition-colors min-h-[44px] min-w-[40px] flex items-center justify-center ${
+                // Alle Ziffern-Buttons erhalten generell den 'border border-amber-500' Rahmen, 
+                // aktive zusätzlich den voll ausgefüllten bg-amber-500 Hintergrund.
+                button.className = `px-3.5 py-3 rounded-xl text-sm font-bold transition-colors min-h-[44px] min-w-[40px] flex items-center justify-center border border-amber-500 ${
                     isActive 
                         ? 'bg-amber-500 text-slate-950 font-extrabold shadow-md' 
                         : 'bg-slate-700 text-slate-200 hover:bg-slate-600 active:bg-slate-500'
@@ -267,10 +270,11 @@
 
             // 2. Rechter Pfeil-Button mit Inline-SVG (→)
             const nextButton = document.createElement('button');
+            // Wenn klickbar: Amber-Rahmen.
             nextButton.className = `px-5 py-3 rounded-xl transition flex items-center justify-center min-h-[44px] min-w-[50px] ${
                 currentPage >= totalPages 
-                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-800' 
-                    : 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:scale-95 shadow-sm'
+                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700/50' 
+                    : 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:scale-95 shadow-sm border border-amber-500'
             }`;
             nextButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`;
             nextButton.disabled = currentPage >= totalPages;
@@ -303,7 +307,6 @@
                 
                 const sourceBoxes = doc.querySelectorAll('.box');
                 
-                // Dynamische Ermittlung der echten Gesamtzahl der Seiten vom WDR
                 let totalPages = 1;
                 const pagingEntries = doc.querySelectorAll('.mod.ico.paging .labels .entry, .controls.paging .labels .entry, .paging .entry');
                 if (pagingEntries.length > 0) {
