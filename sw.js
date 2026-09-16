@@ -1,5 +1,5 @@
 // === KÖTTELMANN APP - Service Worker ===
-const CACHE_NAME = 'koettelmann-v30';
+const CACHE_NAME = 'koettelmann-v31';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -31,7 +31,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Externe Requests (wie den Cloudflare-Worker / WDR-Daten) direkt durchlassen
+  // Externe Requests (Cloudflare-Worker / WDR-Daten) direkt durchlassen
   if (event.request.url.includes('workers.dev')) {
     event.respondWith(fetch(event.request));
     return;
