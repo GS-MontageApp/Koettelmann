@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Köttelmann App</title>
-    <!-- Tailwind CSS CDN für modernes, mobiles Design -->
+    <title>Köttelmann App - Live</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -22,16 +22,19 @@
         <div class="max-w-md mx-auto flex justify-between items-start">
             <div>
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
-                <p class="text-[11px] text-slate-400 mt-0.5">Erstellt am: 16.09.2026, 10:15 Uhr</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.3</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.4</span>
         </div>
     </header>
 
-    <!-- Main Content Area (Hier werden die geparsten Episoden per JavaScript eingefügt) -->
+    <!-- Main Content Area -->
     <main class="max-w-md w-full mx-auto p-4 flex-grow space-y-4">
+        <div id="loading-indicator" class="text-center py-10 text-slate-400 text-sm animate-pulse">
+            Lade Live-Daten von der WDR-Mediathek...
+        </div>
         <div id="episode-container" class="space-y-3">
-            <!-- Dynamisch generierte p-5 Cards -->
+            <!-- Dynamisch generierte Live-Karten -->
         </div>
     </main>
 
@@ -42,125 +45,109 @@
         </div>
     </footer>
 
-    <!-- 
-      QUELLE / DOM-BEREICH FÜR DEN PARSER
-      (Simuliert die geladene WDR-Struktur zur Laufzeit)
-    -->
-    <div id="source-dom" class="hidden">
-        <div class="box">
-            <h3><a>Ölpreis</a></h3>
-            <div class="mediaDate">16.09.2026</div>
-            <div class="mediaDuration">1 Min. 32 Sek.</div>
-            <div class="mediaExpiry">Verfügbar bis 16.09.2028</div>
-            <a class="audio-link" href="https://wdrmedien-a.akamaihd.net/media/p/public/weltweit/2026/09/15/beb72289-841e-458d-b3e2-a92ea0cc30d4/beb72289-841e-458d-b3e2-a92ea0cc30d4_MP3-128.mp3">Download</a>
-        </div>
-        <div class="box">
-            <h3><a>100 Tage bis Weihnachten</a></h3>
-            <div class="mediaDate">15.09.2026</div>
-            <div class="mediaDuration">1 Min. 30 Sek.</div>
-            <div class="mediaExpiry">Verfügbar bis 15.09.2028</div>
-            <a class="audio-link" href="https://wdrmedien-a.akamaihd.net/media/p/public/weltweit/2026/09/15/9295abdd-e89b-4e9e-b923-34c9bfc1d75b/9295abdd-e89b-4e9e-b923-34c9bfc1d75b_MP3-128.mp3">Download</a>
-        </div>
-        <div class="box">
-            <h3><a>Elterntaxi-Sicherheitspaket</a></h3>
-            <div class="mediaDate">14.09.2026</div>
-            <div class="mediaDuration">1 Min. 35 Sek.</div>
-            <div class="mediaExpiry">Verfügbar bis 14.09.2028</div>
-            <a class="audio-link" href="https://wdrmedien-a.akamaihd.net/media/p/public/weltweit/2026/09/11/3e33fbdb-f115-46ed-8d89-ef92a714fa33/3e33fbdb-f115-46ed-8d89-ef92a714fa33_MP3-128.mp3">Download</a>
-        </div>
-        <div class="box">
-            <h3><a>Herbst</a></h3>
-            <div class="mediaDate">11.09.2026</div>
-            <div class="mediaDuration">1 Min. 29 Sek.</div>
-            <div class="mediaExpiry">Verfügbar bis 11.09.2028</div>
-            <a class="audio-link" href="https://wdrmedien-a.akamaihd.net/media/p/public/weltweit/2026/09/10/bc4cee92-c21c-406b-b6ae-ef7ab138bf7e/bc4cee92-c21c-406b-b6ae-ef7ab138bf7e_MP3-128.mp3">Download</a>
-        </div>
-        <div class="box">
-            <h3><a>Bundesweiter Warntag</a></h3>
-            <div class="mediaDate">10.09.2026</div>
-            <div class="mediaDuration">1 Min. 27 Sek.</div>
-            <div class="mediaExpiry">Verfügbar bis 10.09.2028</div>
-            <a class="audio-link" href="https://wdrmedien-a.akamaihd.net/media/p/public/weltweit/2026/09/09/efbcca3f-3021-4ad8-ac0c-7d48ca60843c/efbcca3f-3021-4ad8-ac0c-7d48ca60843c_MP3-128.mp3">Download</a>
-        </div>
-    </div>
-
-    <!-- JavaScript: Parser & Exklusive Akkordeon-Logik -->
+    <!-- JavaScript: Live-Fetch, Parser & Akkordeon-Logik -->
     <script>
         let activeAudio = null;
+        const WORKER_URL = "https://koettelmann-proxy.m3-jost.workers.dev/?url=";
+        const TARGET_WDR_URL = "https://www1.wdr.de/mediathek/audio/wdr4/autohaus-koettelmann/index.html";
 
-        function parseAndRender() {
+        async function fetchAndParseLiveWDR() {
             const container = document.getElementById('episode-container');
-            const sourceBoxes = document.querySelectorAll('#source-dom .box');
-            container.innerHTML = '';
+            const loader = document.getElementById('loading-indicator');
 
-            sourceBoxes.forEach((box, index) => {
-                // DOM-Parsing nach den WDR-Klassen
-                const titleEl = box.querySelector('h3 a');
-                const dateEl = box.querySelector('.mediaDate');
-                const durationEl = box.querySelector('.mediaDuration');
-                const expiryEl = box.querySelector('.mediaExpiry');
-                const audioEl = box.querySelector('.audio-link');
+            try {
+                const response = await fetch(WORKER_URL + encodeURIComponent(TARGET_WDR_URL));
+                if (!response.ok) throw new Error("Netzwerkfehler beim Abrufen des Proxies.");
 
-                if (!titleEl || !audioEl) return;
-
-                const title = titleEl.innerText.trim();
-                const date = dateEl ? dateEl.innerText.trim() : '';
-                const duration = durationEl ? durationEl.innerText.trim() : '';
-                const expires = expiryEl ? expiryEl.innerText.trim() : '';
-                const audioUrl = audioEl.getAttribute('href');
-
-                // Erste Karte ist offen, alle weiteren geschlossen
-                const isOpen = (index === 0) ? 'open' : '';
-
-                const card = document.createElement('div');
-                card.className = "bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-sm transition hover:border-slate-600";
+                const htmlText = await response.text();
                 
-                card.innerHTML = `
-                    <details class="group episode-details" ${isOpen}>
-                        <summary class="flex justify-between items-center cursor-pointer list-none">
-                            <span class="font-semibold text-amber-400 text-base">${title}</span>
-                            <span class="transform transition-transform duration-200 group-open:rotate-180 text-slate-400 text-sm">&#9660;</span>
-                        </summary>
-                        <div class="mt-4 pt-3 border-t border-slate-700/60 space-y-2 text-sm text-slate-300">
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">Veröffentlichung:</span>
-                                <span class="font-medium">${date}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">Laufzeit:</span>
-                                <span class="font-medium">${duration}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">Verfügbarkeit:</span>
-                                <span class="font-medium text-emerald-400">${expires}</span>
-                            </div>
-                            <div class="pt-3">
-                                <button onclick="toggleAudio('${audioUrl}', this)" class="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition flex items-center justify-center space-x-2 active:scale-95 shadow-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
-                                    </svg>
-                                    <span>Audio starten</span>
-                                </button>
-                            </div>
-                        </div>
-                    </details>
-                `;
-                container.appendChild(card);
-            });
+                // HTML-String in ein echtes DOM parsen
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlText, 'text/html');
 
-            // Exklusive Akkordeon-Logik: Schließt alle anderen Karten, wenn eine geöffnet wird
-            const allDetails = container.querySelectorAll('details.episode-details');
-            allDetails.forEach(details => {
-                details.addEventListener('toggle', (e) => {
-                    if (details.open) {
-                        allDetails.forEach(other => {
-                            if (other !== details) {
-                                other.removeAttribute('open');
-                            }
-                        });
-                    }
+                // Alle Boxen auf der echten WDR-Seite finden
+                const sourceBoxes = doc.querySelectorAll('.box');
+                
+                loader.remove();
+                container.innerHTML = '';
+
+                if (sourceBoxes.length === 0) {
+                    container.innerHTML = `<div class="text-center text-slate-400 py-6 text-sm">Keine Episoden im DOM gefunden.</div>`;
+                    return;
+                }
+
+                sourceBoxes.forEach((box, index) => {
+                    const titleEl = box.querySelector('h3 a');
+                    const dateEl = box.querySelector('.mediaDate');
+                    const durationEl = box.querySelector('.mediaDuration');
+                    const expiryEl = box.querySelector('.mediaExpiry');
+                    const audioEl = box.querySelector('.button.download') || box.querySelector('a[href*=".mp3"]');
+
+                    if (!titleEl) return;
+
+                    const title = titleEl.innerText.trim();
+                    const date = dateEl ? dateEl.innerText.trim() : '';
+                    const duration = durationEl ? durationEl.innerText.trim() : '';
+                    const expires = expiryEl ? expiryEl.innerText.trim() : '';
+                    const audioUrl = audioEl ? audioEl.getAttribute('href') : '';
+
+                    // Erste Karte offen, alle weiteren geschlossen
+                    const isOpen = (index === 0) ? 'open' : '';
+
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-sm transition hover:border-slate-600";
+                    
+                    card.innerHTML = `
+                        <details class="group episode-details" ${isOpen}>
+                            <summary class="flex justify-between items-center cursor-pointer list-none">
+                                <span class="font-semibold text-amber-400 text-base">${title}</span>
+                                <span class="transform transition-transform duration-200 group-open:rotate-180 text-slate-400 text-sm">&#9660;</span>
+                            </summary>
+                            <div class="mt-4 pt-3 border-t border-slate-700/60 space-y-2 text-sm text-slate-300">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Veröffentlichung:</span>
+                                    <span class="font-medium">${date}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Laufzeit:</span>
+                                    <span class="font-medium">${duration}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Verfügbarkeit:</span>
+                                    <span class="font-medium text-emerald-400">${expires}</span>
+                                </div>
+                                ${audioUrl ? `
+                                <div class="pt-3">
+                                    <button onclick="toggleAudio('${audioUrl}', this)" class="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition flex items-center justify-center space-x-2 active:scale-95 shadow-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Audio starten</span>
+                                    </button>
+                                </div>` : `<div class="text-xs text-amber-500 pt-2">Kein direkter Download-Link gefunden.</div>`}
+                            </div>
+                        </details>
+                    `;
+                    container.appendChild(card);
                 });
-            });
+
+                // Exklusive Akkordeon-Logik (immer nur eine Karte offen)
+                const allDetails = container.querySelectorAll('details.episode-details');
+                allDetails.forEach(details => {
+                    details.addEventListener('toggle', () => {
+                        if (details.open) {
+                            allDetails.forEach(other => {
+                                if (other !== details) {
+                                    other.removeAttribute('open');
+                                }
+                            });
+                        }
+                    });
+                });
+
+            } catch (err) {
+                loader.innerHTML = `<span class="text-red-400">Fehler beim Laden der Live-Daten: ${err.message}</span>`;
+            }
         }
 
         function toggleAudio(url, btnElement) {
@@ -185,12 +172,12 @@
             if (e.key === 'Escape' && activeAudio) {
                 activeAudio.pause();
                 activeAudio = null;
-                parseAndRender();
+                fetchAndParseLiveWDR();
             }
         });
 
-        // Ausführung beim Laden
-        parseAndRender();
+        // Live-Abruf beim Start ausführen
+        fetchAndParseLiveWDR();
     </script>
 </body>
 </html>
