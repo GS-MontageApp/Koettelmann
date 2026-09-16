@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.15    ================================================================================  -->
+<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.16    ================================================================================  -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -45,7 +45,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.15</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.16</span>
         </div>
     </header>
 
@@ -182,6 +182,7 @@
             localStorage.setItem(STORAGE_KEY_FAVORITES, JSON.stringify(favorites));
 
             const starBtn = event.currentTarget;
+            // Direkt sauberes Neurendern des SVG-Inhalts im Button je nach Status
             if (isFav) {
                 starBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-400 fill-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>`;
             } else {
@@ -198,7 +199,7 @@
             const navContainer = document.getElementById('pagination-container');
             navContainer.innerHTML = '';
 
-            if (totalPages <= 1) return; // Keine Navigation nötig, wenn nur 1 Seite existiert
+            if (totalPages <= 1) return;
 
             let pagesToShow = [];
 
@@ -238,7 +239,6 @@
                     }`;
                     button.textContent = item;
 
-                    // Klick-Event zum Seitenwechsel mit Inhalts-Cleanup
                     button.addEventListener('click', () => {
                         const targetUrl = item === 1 
                             ? BASE_TARGET_URL + "index.html" 
@@ -256,7 +256,7 @@
         async function fetchAndParseLiveWDR(targetUrl = BASE_TARGET_URL + "index.html", pageNum = 1) {
             const container = document.getElementById('episode-container');
             
-            // 1. Inhalts-Cleanup: Alte Audios/Karten komplett entfernen, um Doppelungen zu verhindern
+            // Inhalts-Cleanup: Alte Audios/Karten komplett entfernen
             container.innerHTML = '';
 
             const loader = document.createElement('div');
@@ -275,13 +275,11 @@
                 
                 const sourceBoxes = doc.querySelectorAll('.box');
                 
-                // Dynamische Ermittlung der Gesamtzahl der Seiten aus der Paginierung im HTML
                 let totalPages = 1;
                 const pagingEntries = doc.querySelectorAll('.mod.ico.paging .labels .entry, .controls.paging .labels .entry, .paging .entry');
                 if (pagingEntries.length > 0) {
                     totalPages = pagingEntries.length;
                 } else {
-                    // Fallback-Suche nach Links mit _pageaudio-
                     doc.querySelectorAll('a[href*="_pageaudio-"]').forEach(a => {
                         const match = a.href.match(/_pageaudio-(\d+)/);
                         if (match) {
@@ -334,12 +332,12 @@
                                         ✓ Gehört
                                     </button>` : ''}
                                     
-                                    <!-- Favoriten-Stern -->
+                                    <!-- Favoriten-Stern (Sauberer initialer SVG-Zustand) -->
                                     ${audioUrl ? `
                                     <button onclick="toggleFavoriteEpisode('${audioUrl}', event)" title="Als Favorit markieren" class="p-1 transition active:scale-95 focus:outline-none">
                                         ${isFav ? `
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-400 fill-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>` : `
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 hover:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976-2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`}
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 hover:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`}
                                     </button>` : ''}
 
                                     <span class="transform transition-transform duration-200 group-open:rotate-180 text-slate-400 text-sm">&#9660;</span>
@@ -385,10 +383,8 @@
                     container.appendChild(card);
                 });
 
-                // Paginierung unten rendern basierend auf den ermittelten Seiten
                 renderPagination(pageNum, totalPages);
 
-                // Akkordeon-Logik & automatischer Audio-Stopp beim Einklappen
                 const allDetails = container.querySelectorAll('details.episode-details');
                 allDetails.forEach(details => {
                     details.addEventListener('toggle', () => {
@@ -406,7 +402,6 @@
                     });
                 });
 
-                // Nach oben scrollen beim Seitenwechsel für perfekten Lesekomfort
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
             } catch (err) {
