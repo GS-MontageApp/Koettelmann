@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v0.0.30 === -->
+<!-- === KÖTTELMANN APP - Version v0.0.31 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -54,8 +54,8 @@
                 <span>Web-App installieren</span>
             </button>
             <div id="install-instructions" class="text-[11px] text-slate-400 bg-slate-800/80 p-3 rounded-xl border border-slate-700/50 text-left space-y-1">
-                <p class="font-semibold text-amber-400">Falls Chrome die Installation blockiert:</p>
-                <p>1. Tippe oben rechts auf die 3 Punkte (Menü).</p>
+                <p class="font-semibold text-amber-400">Installations-Hinweis:</p>
+                <p>1. Tippe auf den Button oben oder nutze das Browser-Menü (3 Punkte oben rechts).</p>
                 <p>2. Wähle <b>„App installieren…“</b> oder <b>„Zum Startbildschirm hinzufügen“</b>.</p>
             </div>
         </div>
@@ -76,7 +76,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.30</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.31</span>
         </div>
     </header>
 
@@ -96,7 +96,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Service Worker Registrar, Gatekeeper, Live-Fetch & Audio -->
+    <!-- JavaScript: Service Worker, Gatekeeper, Live-Fetch, Audio & Splash -->
     <script>
         let deferredPrompt = null;
         let activeAudio = null;
@@ -113,12 +113,12 @@
         const STORAGE_KEY_SPLASH = "koettelmann_splash_date";
         const STORAGE_KEY_INSTALLED = "koettelmann_installed";
 
-        // Service Worker registrieren, damit Chrome die App als echte PWA validiert
+        // Service Worker registrieren
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker registriert mit Scope:', reg.scope))
-                    .catch(err => console.log('Service Worker Registrierung fehlgeschlagen:', err));
+                    .then(reg => console.log('Service Worker registriert:', reg.scope))
+                    .catch(err => console.log('Service Worker Fehler:', err));
             });
         }
 
@@ -128,7 +128,7 @@
             deferredPrompt = e;
         });
 
-        // Gatekeeper & Splash beim Start prüfen
+        // App-Launch-State prüfen (Gatekeeper vs. Live-Modus)
         function checkAppLaunchState() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
             const isMarkedInstalled = localStorage.getItem(STORAGE_KEY_INSTALLED) === 'true';
@@ -160,7 +160,6 @@
                     deferredPrompt = null;
                 });
             } else {
-                // Wenn kein Prompt bereitsteht (z.B. Chrome Menü-Hinweis wurde genutzt)
                 localStorage.setItem(STORAGE_KEY_INSTALLED, 'true');
                 const gatekeeper = document.getElementById('install-gatekeeper');
                 if (gatekeeper) gatekeeper.classList.add('hidden');
