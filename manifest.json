@@ -1,21 +1,17 @@
 {
-  "name": "Köttelmann App",
+  "name": "Autohaus Köttelmann",
   "short_name": "Köttelmann",
+  "description": "Live-Mediathek und Audioplayer für Autohaus Köttelmann",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
-  "description": "Mobile Web-App für das Autohaus Köttelmann",
   "icons": [
     {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-512.png",
+      "src": "img/splash.jpg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpeg",
+      "purpose": "any maskable"
     }
   ]
 }
