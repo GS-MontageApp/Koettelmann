@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v0.0.34 === -->
+<!-- === KÖTTELMANN APP - Version v0.0.35 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -38,29 +38,6 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-900">
 
-    <!-- Installations-Gatekeeper (Wird angezeigt, wenn die App im Browser und noch nicht installiert ist) -->
-    <div id="install-gatekeeper" class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 text-center hidden">
-        <div class="max-w-sm w-full space-y-6 bg-slate-900 border border-amber-500/50 p-6 rounded-3xl shadow-2xl">
-            <div class="w-16 h-16 bg-amber-500/10 border border-amber-500 rounded-2xl mx-auto flex items-center justify-center text-amber-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-            </div>
-            <div class="space-y-2">
-                <h2 class="text-xl font-bold text-amber-400">Autohaus Köttelmann</h2>
-                <p class="text-xs text-slate-400 leading-relaxed">Bitte installiere diese Web-App auf deinem Gerät, um die Live-Mediathek und alle Funktionen nutzen zu können.</p>
-            </div>
-            <button id="install-btn" onclick="triggerInstall()" class="w-full py-3.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition shadow-md active:scale-95 text-sm flex items-center justify-center space-x-2 border border-amber-400">
-                <span>Web-App installieren</span>
-            </button>
-            <div id="install-instructions" class="text-[11px] text-slate-400 bg-slate-800/80 p-3 rounded-xl border border-slate-700/50 text-left space-y-1">
-                <p class="font-semibold text-amber-400">Installations-Hinweis:</p>
-                <p>1. Tippe auf den Button oben oder nutze das Browser-Menü (3 Punkte oben rechts).</p>
-                <p>2. Wähle <b>„App installieren…“</b> oder <b>„Zum Startbildschirm hinzufügen“</b>.</p>
-            </div>
-        </div>
-    </div>
-
     <!-- Splash Screen Overlay (Einmal täglich beim ersten Start) -->
     <div id="splash-screen" class="fixed inset-0 z-40 bg-slate-950 flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden cursor-pointer" onclick="dismissSplashScreen()" title="Zum Fortfahren antippen">
         <div class="max-w-sm w-full text-center space-y-4">
@@ -76,7 +53,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.34</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.35</span>
         </div>
     </header>
 
@@ -96,9 +73,8 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Service Worker, Gatekeeper, Live-Fetch, Audio & Splash -->
+    <!-- JavaScript: Service Worker, Live-Fetch, Audio & Splash -->
     <script>
-        let deferredPrompt = null;
         let activeAudio = null;
         let activeAudioUrl = null;
         let activePlayButton = null;
@@ -111,7 +87,6 @@
         const STORAGE_KEY_COMPLETED = "koettelmann_completed_episodes";
         const STORAGE_KEY_FAVORITES = "koettelmann_favorite_episodes";
         const STORAGE_KEY_SPLASH = "koettelmann_splash_date";
-        const STORAGE_KEY_INSTALLED = "koettelmann_installed";
 
         // Service Worker registrieren
         if ('serviceWorker' in navigator) {
@@ -122,49 +97,10 @@
             });
         }
 
-        // PWA Installations-Event abfangen
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-        });
-
-        // App-Launch-State prüfen (Gatekeeper vs. Live-Modus)
-        function checkAppLaunchState() {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-            const isMarkedInstalled = localStorage.getItem(STORAGE_KEY_INSTALLED) === 'true';
-
-            if (!isStandalone && !isMarkedInstalled) {
-                const gatekeeper = document.getElementById('install-gatekeeper');
-                if (gatekeeper) gatekeeper.classList.remove('hidden');
-                return false;
-            }
-
-            const gatekeeper = document.getElementById('install-gatekeeper');
-            if (gatekeeper) gatekeeper.classList.add('hidden');
-            
+        // App starten (Splash prüfen & Live-Daten laden)
+        function initApp() {
             checkAndShowSplashScreen();
             fetchAndParseLiveWDR();
-            return true;
-        }
-
-        function triggerInstall() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        localStorage.setItem(STORAGE_KEY_INSTALLED, 'true');
-                        const gatekeeper = document.getElementById('install-gatekeeper');
-                        if (gatekeeper) gatekeeper.classList.add('hidden');
-                        checkAppLaunchState();
-                    }
-                    deferredPrompt = null;
-                });
-            } else {
-                localStorage.setItem(STORAGE_KEY_INSTALLED, 'true');
-                const gatekeeper = document.getElementById('install-gatekeeper');
-                if (gatekeeper) gatekeeper.classList.add('hidden');
-                checkAppLaunchState();
-            }
         }
 
         // Splash Screen Logik (einmal täglich beim ersten Start)
@@ -649,9 +585,9 @@
             }
         });
 
-        // Start beim Laden der App
+        // App beim Laden initialisieren
         document.addEventListener('DOMContentLoaded', () => {
-            checkAppLaunchState();
+            initApp();
         });
     </script>
 </body>
