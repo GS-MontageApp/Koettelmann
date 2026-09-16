@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v0.0.43 === -->
+<!-- === KÖTTELMANN APP - Version v0.0.44 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -46,14 +46,18 @@
         </div>
     </div>
 
-    <!-- Header -->
+    <!-- Header mit integrierter Grafik im linken Bereich -->
     <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 px-4 py-3 shadow-md">
-        <div class="max-w-md mx-auto flex justify-between items-start">
-            <div>
-                <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
-                <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <!-- Grafik im Header (40px Höhe / h-10) -->
+                <img src="image/header2.jpg" alt="Logo" class="h-10 w-auto rounded-lg object-cover border border-slate-700 shadow-sm flex-shrink-0">
+                <div>
+                    <h1 class="text-base font-bold tracking-wide text-amber-400 leading-tight">Autohaus Köttelmann</h1>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
+                </div>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.43</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono flex-shrink-0">v0.0.44</span>
         </div>
     </header>
 
@@ -645,14 +649,7 @@
         }
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && activeAudio) {
-                activeAudio.pause();
-                if (activePlayButton) activePlayButton.innerText = "Weiter";
-                if (activeProgressBar) activeProgressBar.value = 0;
-                if (activeAudioUrl && activeAudio.duration && (activeAudio.duration - activeAudio.currentTime) <= 20) {
-                    markAsCompletedAutomatic(activeCardDetails, activeAudioUrl);
-                }
-            }
+            e.key === 'Escape' && activeAudio && activeAudio.pause();
         });
 
         // App beim Laden initialisieren
