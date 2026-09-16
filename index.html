@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v48 === -->
+<!-- === KÖTTELMANN APP - Version v49 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -46,17 +46,21 @@
         </div>
     </div>
 
-    <!-- Header: Glasklarer Hintergrund ohne Overlay, Titel rechts oben, Version rechts unten -->
-    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md relative overflow-hidden h-16">
+    <!-- Header: 1,5-fache Höhe (h-24), glasklarer Hintergrund, zweizeiliger versetzter Titel, Version rechts unten -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md relative overflow-hidden h-24">
         <!-- Vollflächiges Hintergrundbild (absolut glasklar, ohne Overlay & ohne Blur) -->
         <div class="absolute inset-0 z-0">
             <img src="img/header2.jpg" alt="Header Hintergrund" class="w-full h-full object-cover">
         </div>
 
-        <!-- Header Inhalt im Vordergrund (mit starkem Schlagschatten für perfekte Lesbarkeit ohne Overlay) -->
+        <!-- Header Inhalt im Vordergrund mit gezieltem Versatz -->
         <div class="max-w-md mx-auto h-full flex flex-col justify-center items-end px-4 relative z-10">
-            <h1 class="text-base font-bold tracking-wide text-white leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">Autohaus Köttelmann</h1>
-            <span class="text-[11px] text-slate-200 font-mono tracking-wider drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">v47</span>
+            <!-- Zeile 1: Autohaus (etwas weiter nach links versetzt via negativem Margin/Transform) -->
+            <span class="text-base font-bold tracking-wide text-white leading-tight transform -translate-x-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">Autohaus</span>
+            <!-- Zeile 2: Köttelmann (bündig rechts) -->
+            <span class="text-base font-bold tracking-wide text-white leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">Köttelmann</span>
+            <!-- Versionsnummer (rechts unten fixiert) -->
+            <span class="text-[11px] text-slate-200 font-mono tracking-wider mt-1 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">v47</span>
         </div>
     </header>
 
