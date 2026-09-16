@@ -1,11 +1,12 @@
-// === KÖTTELMANN APP - Service Worker v43 (Network-First Strategie) ===
-const CACHE_NAME = 'koettelmann-v43';
+// === KÖTTELMANN APP - Service Worker v44 ===
+const CACHE_NAME = 'koettelmann-v44';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
   './img/splash.jpg',
   './img/icon-192.png',
-  './img/icon-512.png'
+  './img/icon-512.png',
+  './image/header2.jpg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -50,7 +51,6 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
-            // Wenn Server antwortet, Cache im Hintergrund aktualisieren
             if (networkResponse && networkResponse.status === 200) {
                 const responseClone = networkResponse.clone();
                 caches.open(CACHE_NAME).then((cache) => {
@@ -60,7 +60,6 @@ self.addEventListener('fetch', (event) => {
             return networkResponse;
         })
         .catch(() => {
-            // Offline-Fallback auf den Cache
             return caches.match(event.request).then((cachedResponse) => {
                 return cachedResponse || caches.match('./index.html');
             });
