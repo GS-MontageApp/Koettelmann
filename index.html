@@ -44,7 +44,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.9</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.10</span>
         </div>
     </header>
 
@@ -65,7 +65,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Steuerung & 80% Gehört-Grenze mit grünem Rahmen -->
+    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Steuerung & 20-Sekunden-Restlaufzeit Gehört-Logik -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -141,9 +141,9 @@
                     const completed = audioUrl && isEpisodeCompleted(audioUrl);
 
                     const card = document.createElement('div');
-                    // Dynamischer Rahmen je nach Gehört-Status
-                    const cardBorderClass = completed ? "border-emerald-700/60" : "border-slate-700";
-                    card.className = `bg-slate-800 border ${cardBorderClass} rounded-2xl p-5 shadow-sm transition hover:border-slate-600 episode-card-wrapper`;
+                    // Deutlich sichtbarer dicker Rahmen (border-2) bei Gehört-Status
+                    const cardBorderClass = completed ? "border-2 border-emerald-500" : "border border-slate-700";
+                    card.className = `bg-slate-800 ${cardBorderClass} rounded-2xl p-5 shadow-sm transition hover:border-slate-600 episode-card-wrapper`;
                     
                     card.innerHTML = `
                         <details class="group episode-details" data-audio-url="${audioUrl}" ${isOpen}>
@@ -248,8 +248,8 @@
                             activeCurrentTimeEl.innerText = formatTime(activeAudio.currentTime);
                         }
 
-                        // Geändert auf 80%-Schwelle (0.80)
-                        if (activeAudio.duration && (activeAudio.currentTime / activeAudio.duration) >= 0.80) {
+                        // Neue Logik: Wenn nur noch 20 Sekunden oder weniger übrig sind
+                        if (activeAudio.duration && (activeAudio.duration - activeAudio.currentTime) <= 20) {
                             markAsCompletedInUI(cardDetails, url);
                         }
                     }
@@ -283,13 +283,11 @@
         function markAsCompletedInUI(cardDetails, url) {
             markEpisodeAsCompleted(url);
             if (cardDetails) {
-                // Grünen Rahmen auf den äußeren Wrapper anwenden
                 const wrapper = cardDetails.closest('.episode-card-wrapper');
                 if (wrapper) {
-                    wrapper.classList.remove('border-slate-700');
-                    wrapper.classList.add('border-emerald-700/60');
+                    wrapper.classList.remove('border', 'border-slate-700');
+                    wrapper.classList.add('border-2', 'border-emerald-500');
                 }
-                // Grünes Badge anzeigen
                 const badge = cardDetails.querySelector('.status-badge');
                 if (badge) badge.classList.remove('hidden');
             }
@@ -322,7 +320,7 @@
                 activeAudio.pause();
                 if (activePlayButton) activePlayButton.innerText = "Start";
                 if (activeProgressBar) activeProgressBar.value = 0;
-                if (activeAudioUrl && activeAudio.duration && (activeAudio.currentTime / activeAudio.duration) >= 0.80) {
+                if (activeAudioUrl && activeAudio.duration && (activeAudio.duration - activeAudio.currentTime) <= 20) {
                     markAsCompletedInUI(activeCardDetails, activeAudioUrl);
                 }
                 activeAudio = null;
