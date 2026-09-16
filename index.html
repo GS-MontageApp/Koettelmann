@@ -53,7 +53,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.40</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.41</span>
         </div>
     </header>
 
@@ -88,22 +88,37 @@
         const STORAGE_KEY_FAVORITES = "koettelmann_favorite_episodes";
         const STORAGE_KEY_SPLASH = "koettelmann_splash_date";
 
-        // Service Worker registrieren und Update-Events abfangen
+        // Service Worker registrieren & aktive Update-Prüfung beim Start erzwingen
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js', { scope: './' })
                     .then(reg => {
                         console.log('Service Worker registriert:', reg.scope);
+                        
+                        // Aktives Polling: Bei jedem App-Start nach Updates auf dem Server suchen
+                        reg.update();
+
                         reg.addEventListener('updatefound', () => {
                             const newWorker = reg.installing;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('Neue PWA-Version verfügbar. Automatisches Update läuft.');
+                                    console.log('Neue PWA-Version im Hintergrund entdeckt und geladen.');
+                                    // Optional: Seite bei neuem Worker sofort weich neu laden, um die v41 direkt anzuzeigen
+                                    window.location.reload();
                                 }
                             });
                         });
                     })
                     .catch(err => console.log('Service Worker Fehler:', err));
+
+                // Falls sich der Service Worker im Hintergrund aktiviert hat
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
             });
         }
 
