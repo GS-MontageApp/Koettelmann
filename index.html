@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v53 === -->
+<!-- === KÖTTELMANN APP - Version v54 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <!-- Header: 1,5-fache Höhe (h-24), glasklarer Hintergrund, vertikal zentriert, dunkles Versions-Badge unten links -->
+    <!-- Header: 1,5-fache Höhe (h-24), glasklarer Hintergrund, vertikal zentriert, v54 ganz unten links -->
     <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md relative overflow-hidden h-24">
         <!-- Vollflächiges Hintergrundbild (absolut glasklar, ohne Overlay & ohne Blur) -->
         <div class="absolute inset-0 z-0">
@@ -55,18 +55,18 @@
 
         <!-- Header Inhalt im Vordergrund (vertikal zentriert via Flexbox) -->
         <div class="max-w-md mx-auto h-full relative z-10 px-4 flex items-center justify-between">
-            <!-- Echte Versionsnummer links unten mit dunklem Badge-Hintergrund (v53) -->
-            <div class="absolute bottom-2 left-4">
-                <span class="text-[11px] text-slate-100 font-mono font-bold px-2 py-0.5 rounded bg-slate-950/80 border border-slate-700/60 shadow-md tracking-wider">v53</span>
+            <!-- Echte Versionsnummer ganz unten links an der Kante mit dunklem Badge (v54) -->
+            <div class="absolute bottom-0 left-0">
+                <span class="text-[10px] text-slate-100 font-mono font-bold px-1.5 py-0.5 rounded-tr bg-slate-950/85 border-r border-t border-slate-700/60 shadow-md tracking-wider">v54</span>
             </div>
 
             <!-- Platzhalter links für Layout-Balance -->
             <div></div>
 
-            <!-- Titel-Block rechts mit präzisem Versatz (AUTOHAUS: -10, KÖTTELMANN: +10) -->
+            <!-- Titel-Block rechts mit präzisem Versatz (AUTOHAUS: -10, KÖTTELMANN: +4) -->
             <div class="flex flex-col items-end pr-1">
                 <span class="text-2xl font-black tracking-wider text-white leading-tight transform -translate-x-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">AUTOHAUS</span>
-                <span class="text-2xl font-black tracking-wider text-white leading-tight transform translate-x-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">KÖTTELMANN</span>
+                <span class="text-2xl font-black tracking-wider text-white leading-tight transform translate-x-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">KÖTTELMANN</span>
             </div>
         </div>
     </header>
@@ -424,8 +424,8 @@
                     card.dataset.audioUrl = audioUrl;
                     
                     card.innerHTML = `
-                        <!-- Wasserzeichen-Hintergrundbild mit 35% Sichtbarkeit im offenen Zustand -->
-                        <div class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300 flex items-center justify-center overflow-hidden z-0 watermarked-bg ${isOpen ? 'opacity-35' : ''}">
+                        <!-- Wasserzeichen-Hintergrundbild mit exakt 20% Sichtbarkeit im offenen Zustand -->
+                        <div class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300 flex items-center justify-center overflow-hidden z-0 watermarked-bg ${isOpen ? 'opacity-20' : ''}">
                             <img src="img/splash.jpg" alt="Wasserzeichen" class="w-full h-full object-cover">
                         </div>
 
@@ -501,7 +501,7 @@
             }
         }
 
-        // Hilfsfunktion zur Steuerung des Wasserzeichens beim Aufklappen
+        // Hilfsfunktion zur Steuerung des Wasserzeichens beim Aufklappen (mit 20% Opacity)
         function toggleDetails(element) {
             let cardWrapper = element.classList.contains('episode-card-wrapper') ? element : element.closest('.episode-card-wrapper');
             if (!cardWrapper) return;
@@ -524,7 +524,7 @@
                         wrapper.classList.remove('open');
                         if (icon) icon.classList.remove('rotate-180');
                         if (bg) {
-                            bg.classList.remove('opacity-35');
+                            bg.classList.remove('opacity-20');
                             bg.classList.add('opacity-0');
                         }
 
@@ -545,9 +545,9 @@
             if (watermarkedBg) {
                 if (!isHidden) {
                     watermarkedBg.classList.remove('opacity-0');
-                    watermarkedBg.classList.add('opacity-35');
+                    watermarkedBg.classList.add('opacity-20');
                 } else {
-                    watermarkedBg.classList.remove('opacity-35');
+                    watermarkedBg.classList.remove('opacity-20');
                     watermarkedBg.classList.add('opacity-0');
                 }
             }
