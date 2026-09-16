@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.20    ================================================================================  -->
+<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.21    ================================================================================  -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -45,7 +45,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.20</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.21</span>
         </div>
     </header>
 
@@ -56,17 +56,17 @@
         </div>
     </main>
 
-    <!-- Footer / Vergrößerte Pfeil-Paginierung -->
+    <!-- Footer / Footer-Paginierung mit Inline-SVG-Pfeilen -->
     <footer class="bg-slate-800 border-t border-slate-700 p-3.5 sticky bottom-0 z-40">
         <div class="max-w-md mx-auto">
-            <!-- Dynamischer Paginierungs-Container mit vergrößerten Buttons -->
+            <!-- Paginierungs-Container mit vergrößerten Buttons & Inline-SVGs -->
             <div id="pagination-container" class="flex justify-between items-center gap-2 w-full">
                 <!-- Wird per JS befüllt -->
             </div>
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Stopp & Vergrößerte Footer-Paginierung -->
+    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Stopp & Inline-SVG Footer -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -207,22 +207,23 @@
             fetchAndParseLiveWDR(targetUrl, pageNum);
         }
 
-        // Paginierung mit verdoppelter Button-Größe (py-3 px-4, min-h-[44px], text-sm)
+        // Paginierung mit vergrößerten Buttons und Inline-SVG-Pfeilen (links/rechts)
         function renderPagination(currentPage, totalPages) {
             const navContainer = document.getElementById('pagination-container');
             navContainer.innerHTML = '';
 
             if (totalPages <= 1) return;
 
-            // 1. Linker Pfeil-Button (<)
+            // 1. Linker Pfeil-Button mit Inline-SVG (←)
             const prevButton = document.createElement('button');
-            prevButton.className = `px-4 py-3 rounded-xl text-sm font-bold transition flex items-center justify-center min-h-[44px] ${
+            prevButton.className = `px-5 py-3 rounded-xl transition flex items-center justify-center min-h-[44px] min-w-[50px] ${
                 currentPage <= 1 
                     ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-800' 
                     : 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:scale-95 shadow-sm'
             }`;
-            prevButton.innerHTML = `&larr; Zurück`;
+            prevButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>`;
             prevButton.disabled = currentPage <= 1;
+            prevButton.title = "Vorherige Seite";
             prevButton.addEventListener('click', () => {
                 if (currentPage > 1) loadPage(currentPage - 1);
             });
@@ -274,15 +275,16 @@
 
             navContainer.appendChild(numbersWrapper);
 
-            // 2. Rechter Pfeil-Button (>)
+            // 2. Rechter Pfeil-Button mit Inline-SVG (→)
             const nextButton = document.createElement('button');
-            nextButton.className = `px-4 py-3 rounded-xl text-sm font-bold transition flex items-center justify-center min-h-[44px] ${
+            nextButton.className = `px-5 py-3 rounded-xl transition flex items-center justify-center min-h-[44px] min-w-[50px] ${
                 currentPage >= totalPages 
                     ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-800' 
                     : 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:scale-95 shadow-sm'
             }`;
-            nextButton.innerHTML = `Vor &rarr;`;
+            nextButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`;
             nextButton.disabled = currentPage >= totalPages;
+            nextButton.title = "Nächste Seite";
             nextButton.addEventListener('click', () => {
                 if (currentPage < totalPages) loadPage(currentPage + 1);
             });
