@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.17    ================================================================================  -->
+<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.18    ================================================================================  -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -45,15 +45,12 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.17</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.18</span>
         </div>
     </header>
 
     <!-- Main Content Area -->
     <main class="max-w-md w-full mx-auto p-4 flex-grow space-y-4 pb-20">
-        <div id="loading-indicator" class="text-center py-10 text-slate-400 text-sm animate-pulse">
-            Lade Live-Daten von der WDR-Mediathek...
-        </div>
         <div id="episode-container" class="space-y-3">
             <!-- Dynamisch generierte Live-Karten (p-5 Card-Anker) -->
         </div>
@@ -239,7 +236,7 @@
                     button.textContent = item;
 
                     button.addEventListener('click', () => {
-                        // NEU: Aktiv laufendes Audio beim Seitenwechsel sofort stoppen
+                        // Aktiv laufendes Audio beim Seitenwechsel sofort stoppen
                         if (activeAudio) {
                             activeAudio.pause();
                             activeAudio = null;
@@ -266,13 +263,14 @@
         async function fetchAndParseLiveWDR(targetUrl = BASE_TARGET_URL + "index.html", pageNum = 1) {
             const container = document.getElementById('episode-container');
             
-            // Inhalts-Cleanup: Alte Audios/Karten komplett entfernen
+            // Inhalts-Cleanup: Alte Audios/Karten und statischen Text komplett entfernen
             container.innerHTML = '';
 
             const loader = document.createElement('div');
             loader.id = 'loading-indicator';
-            loader.className = 'text-center py-10 text-slate-400 text-sm animate-pulse';
-            loader.textContent = `Lade Live-Daten für Seite ${pageNum}...`;
+            // Angepasste Farbe: Gelb-Orange (text-amber-400) für bessere Sichtbarkeit und Design-Harmonie
+            loader.className = 'text-center py-10 text-amber-400 text-sm font-medium animate-pulse';
+            loader.textContent = `Lade Live-Daten von der WDR-Mediathek...`;
             container.appendChild(loader);
 
             try {
@@ -299,6 +297,7 @@
                     });
                 }
 
+                // Loader restlos entfernen, sobald Daten da sind
                 loader.remove();
 
                 if (sourceBoxes.length === 0) {
