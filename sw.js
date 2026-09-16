@@ -1,12 +1,12 @@
-// === KÖTTELMANN APP - Service Worker v44 ===
-const CACHE_NAME = 'koettelmann-v44';
+// === KÖTTELMANN APP - Service Worker v45 ===
+const CACHE_NAME = 'koettelmann-v0.0.45';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
   './img/splash.jpg',
   './img/icon-192.png',
   './img/icon-512.png',
-  './image/header2.jpg'
+  './img/header2.jpg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -17,7 +17,6 @@ self.addEventListener('install', (event) => {
       );
     })
   );
-  // Sofortige Aktivierung erzwingen
   self.skipWaiting();
 });
 
@@ -33,20 +32,17 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  // Kontrolle sofort übernehmen
   self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
-  // Externe Anfragen (Cloudflare Proxy / WDR API) direkt durchlassen
   if (requestUrl.origin !== location.origin || requestUrl.search.includes('workers.dev')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Network-First Strategie für HTML / Einstiegspunkt (index.html)
   if (event.request.mode === 'navigate' || requestUrl.pathname.endsWith('.html') || requestUrl.pathname.endsWith('/')) {
     event.respondWith(
       fetch(event.request)
@@ -68,7 +64,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-First Strategie für statische Assets (Bilder, Manifest, Icons)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request).catch(() => {
