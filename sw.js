@@ -1,15 +1,16 @@
-// === KÖTTELMANN APP - Service Worker v33 ===
-const CACHE_NAME = 'koettelmann-v33';
+// === KÖTTELMANN APP - Service Worker v34 ===
+const CACHE_NAME = 'koettelmann-v34';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
-  './img/splash.jpg'
+  './img/splash.jpg',
+  './img/icon-192.png',
+  './img/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Einzelnes Caching mit Fehlerbehandlung, damit keine Exception die Installation wirft
       return Promise.allSettled(
         ASSETS_TO_CACHE.map(asset => cache.add(asset).catch(err => console.warn('Asset fehlgeschlagen beim Caching:', asset, err)))
       );
@@ -42,7 +43,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request).catch(() => {
-        // Fallback falls offline
         return caches.match('./index.html');
       });
     })
