@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.19    ================================================================================  -->
+<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.20    ================================================================================  -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -45,28 +45,28 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.19</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.20</span>
         </div>
     </header>
 
     <!-- Main Content Area -->
-    <main class="max-w-md w-full mx-auto p-4 flex-grow space-y-4 pb-20">
+    <main class="max-w-md w-full mx-auto p-4 flex-grow space-y-4 pb-24">
         <div id="episode-container" class="space-y-3">
             <!-- Dynamisch generierte Live-Karten (p-5 Card-Anker) -->
         </div>
     </main>
 
-    <!-- Footer / Optimierte Pfeil-Paginierung -->
-    <footer class="bg-slate-800 border-t border-slate-700 p-3 sticky bottom-0 z-40">
+    <!-- Footer / Vergrößerte Pfeil-Paginierung -->
+    <footer class="bg-slate-800 border-t border-slate-700 p-3.5 sticky bottom-0 z-40">
         <div class="max-w-md mx-auto">
-            <!-- Dynamischer Paginierungs-Container mit äußeren Pfeilen und max. 4 Elementen dazwischen -->
-            <div id="pagination-container" class="flex justify-between items-center gap-1 w-full">
+            <!-- Dynamischer Paginierungs-Container mit vergrößerten Buttons -->
+            <div id="pagination-container" class="flex justify-between items-center gap-2 w-full">
                 <!-- Wird per JS befüllt -->
             </div>
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Stopp & Optimierte Footer-Logik -->
+    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Stopp & Vergrößerte Footer-Paginierung -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -189,9 +189,7 @@
             return getFavoriteEpisodes().includes(url);
         }
 
-        // Hilfsfunktion zum Laden einer spezifischen Seite
         function loadPage(pageNum) {
-            // Aktiv laufendes Audio beim Seitenwechsel sofort stoppen
             if (activeAudio) {
                 activeAudio.pause();
                 activeAudio = null;
@@ -209,7 +207,7 @@
             fetchAndParseLiveWDR(targetUrl, pageNum);
         }
 
-        // Optimierte Paginierungs-Render-Funktion mit äußeren Pfeilen und max. 4 Hauptelementen
+        // Paginierung mit verdoppelter Button-Größe (py-3 px-4, min-h-[44px], text-sm)
         function renderPagination(currentPage, totalPages) {
             const navContainer = document.getElementById('pagination-container');
             navContainer.innerHTML = '';
@@ -218,10 +216,10 @@
 
             // 1. Linker Pfeil-Button (<)
             const prevButton = document.createElement('button');
-            prevButton.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center ${
+            prevButton.className = `px-4 py-3 rounded-xl text-sm font-bold transition flex items-center justify-center min-h-[44px] ${
                 currentPage <= 1 
                     ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-800' 
-                    : 'bg-slate-700 text-slate-200 hover:bg-slate-600 active:scale-95'
+                    : 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:scale-95 shadow-sm'
             }`;
             prevButton.innerHTML = `&larr; Zurück`;
             prevButton.disabled = currentPage <= 1;
@@ -230,9 +228,9 @@
             });
             navContainer.appendChild(prevButton);
 
-            // Innerer Container für die Ziffern (max. 4 Elemente nach Vorgabe)
+            // Innerer Container für Ziffern
             const numbersWrapper = document.createElement('div');
-            numbersWrapper.className = 'flex items-center gap-1 justify-center flex-grow mx-1';
+            numbersWrapper.className = 'flex items-center gap-1.5 justify-center flex-grow mx-1';
 
             let pagesToShow = [];
             if (totalPages <= 4) {
@@ -240,7 +238,6 @@
                     pagesToShow.push(i);
                 }
             } else {
-                // Intelligente Kürzung auf max. 4 Elemente (z.B. 1, 2, ..., max)
                 if (currentPage <= 3) {
                     pagesToShow = [1, 2, '...', totalPages];
                 } else if (currentPage >= totalPages - 2) {
@@ -253,17 +250,17 @@
             pagesToShow.forEach(item => {
                 if (item === '...') {
                     const span = document.createElement('span');
-                    span.className = 'px-1 text-slate-500 font-bold text-xs select-none';
+                    span.className = 'px-1 text-slate-500 font-bold text-sm select-none';
                     span.textContent = '…';
                     numbersWrapper.appendChild(span);
                 } else {
                     const button = document.createElement('button');
                     const isActive = item === currentPage;
                     
-                    button.className = `px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    button.className = `px-3.5 py-3 rounded-xl text-sm font-bold transition-colors min-h-[44px] min-w-[40px] flex items-center justify-center ${
                         isActive 
-                            ? 'bg-amber-500 text-slate-950 font-bold shadow-sm' 
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600 active:bg-slate-500'
+                            ? 'bg-amber-500 text-slate-950 font-extrabold shadow-md' 
+                            : 'bg-slate-700 text-slate-200 hover:bg-slate-600 active:bg-slate-500'
                     }`;
                     button.textContent = item;
 
@@ -279,10 +276,10 @@
 
             // 2. Rechter Pfeil-Button (>)
             const nextButton = document.createElement('button');
-            nextButton.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center ${
+            nextButton.className = `px-4 py-3 rounded-xl text-sm font-bold transition flex items-center justify-center min-h-[44px] ${
                 currentPage >= totalPages 
                     ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-800' 
-                    : 'bg-slate-700 text-slate-200 hover:bg-slate-600 active:scale-95'
+                    : 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:scale-95 shadow-sm'
             }`;
             nextButton.innerHTML = `Vor &rarr;`;
             nextButton.disabled = currentPage >= totalPages;
@@ -296,7 +293,6 @@
         async function fetchAndParseLiveWDR(targetUrl = BASE_TARGET_URL + "index.html", pageNum = 1) {
             const container = document.getElementById('episode-container');
             
-            // Inhalts-Cleanup: Alte Audios/Karten komplett entfernen
             container.innerHTML = '';
 
             const loader = document.createElement('div');
