@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.26    ================================================================================  -->
+<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.27    ================================================================================  -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -45,7 +45,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.26</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.27</span>
         </div>
     </header>
 
@@ -56,7 +56,7 @@
         </div>
     </main>
 
-    <!-- Footer / Mitwandernde Paginierung mit Amber-Rahmen -->
+    <!-- Footer / Mitwandernde Paginierung -->
     <footer class="bg-slate-800 border-t border-slate-700 p-3.5 sticky bottom-0 z-40">
         <div class="max-w-md mx-auto">
             <div id="pagination-container" class="flex justify-between items-center gap-2 w-full">
@@ -65,7 +65,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Audio-Stopp & Live-Paginierung -->
+    <!-- JavaScript: Live-Fetch, Parser, Audio-Stopp & aktualisierte Karten-/Button-Rahmen -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -138,14 +138,14 @@
 
             if (isCompleted) {
                 if (wrapper) {
-                    wrapper.classList.remove('border', 'border-slate-700');
-                    wrapper.classList.add('border-2', 'border-emerald-500');
+                    wrapper.classList.remove('border-amber-500');
+                    wrapper.classList.add('border-emerald-500');
                 }
                 if (badge) badge.classList.remove('hidden');
             } else {
                 if (wrapper) {
-                    wrapper.classList.remove('border-2', 'border-emerald-500');
-                    wrapper.classList.add('border', 'border-slate-700');
+                    wrapper.classList.remove('border-emerald-500');
+                    wrapper.classList.add('border-amber-500');
                 }
                 if (badge) badge.classList.add('hidden');
             }
@@ -206,16 +206,15 @@
             fetchAndParseLiveWDR(targetUrl, pageNum);
         }
 
-        // Paginierung: Schiebefenster & Amber-Rahmen für anklickbare Buttons
+        // Paginierung mit Sliding Window & Amber-Rahmen
         function renderPagination(currentPage, totalPages) {
             const navContainer = document.getElementById('pagination-container');
             navContainer.innerHTML = '';
 
             if (totalPages <= 1) return;
 
-            // 1. Linker Pfeil-Button mit Inline-SVG (←)
+            // Linker Pfeil-Button
             const prevButton = document.createElement('button');
-            // Wenn klickbar: Amber-Rahmen (border-amber-500). Wenn deaktiviert: Dezenter Slate-Rahmen.
             prevButton.className = `px-5 py-3 rounded-xl transition flex items-center justify-center min-h-[44px] min-w-[50px] ${
                 currentPage <= 1 
                     ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700/50' 
@@ -229,7 +228,7 @@
             });
             navContainer.appendChild(prevButton);
 
-            // Innerer Container für das mitwandernde Fenster (Sliding Window)
+            // Ziffern-Fenster (Sliding Window)
             const numbersWrapper = document.createElement('div');
             numbersWrapper.className = 'flex items-center gap-1.5 justify-center flex-grow mx-1';
 
@@ -250,8 +249,6 @@
                 const button = document.createElement('button');
                 const isActive = item === currentPage;
                 
-                // Alle Ziffern-Buttons erhalten generell den 'border border-amber-500' Rahmen, 
-                // aktive zusätzlich den voll ausgefüllten bg-amber-500 Hintergrund.
                 button.className = `px-3.5 py-3 rounded-xl text-sm font-bold transition-colors min-h-[44px] min-w-[40px] flex items-center justify-center border border-amber-500 ${
                     isActive 
                         ? 'bg-amber-500 text-slate-950 font-extrabold shadow-md' 
@@ -268,9 +265,8 @@
 
             navContainer.appendChild(numbersWrapper);
 
-            // 2. Rechter Pfeil-Button mit Inline-SVG (→)
+            // Rechter Pfeil-Button
             const nextButton = document.createElement('button');
-            // Wenn klickbar: Amber-Rahmen.
             nextButton.className = `px-5 py-3 rounded-xl transition flex items-center justify-center min-h-[44px] min-w-[50px] ${
                 currentPage >= totalPages 
                     ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700/50' 
@@ -285,7 +281,7 @@
             navContainer.appendChild(nextButton);
         }
 
-        // Hauptfunktion zum Live-Laden und Parsen der WDR-Seite
+        // Hauptfunktion zum Live-Laden und Parsen
         async function fetchAndParseLiveWDR(targetUrl = BASE_TARGET_URL + "index.html", pageNum = 1) {
             const container = document.getElementById('episode-container');
             
@@ -350,8 +346,9 @@
                     const isFav = audioUrl && isEpisodeFavorite(audioUrl);
 
                     const card = document.createElement('div');
-                    const cardBorderClass = completed ? "border-2 border-emerald-500" : "border border-slate-700";
-                    card.className = `bg-slate-800 ${cardBorderClass} rounded-2xl p-5 shadow-sm transition hover:border-slate-600 episode-card-wrapper`;
+                    // NEU: Standardmäßig Amber-Rahmen, bei completed auf Grün wechselnd
+                    const cardBorderClass = completed ? "border-2 border-emerald-500" : "border-2 border-amber-500";
+                    card.className = `bg-slate-800 ${cardBorderClass} rounded-2xl p-5 shadow-sm transition hover:opacity-95 episode-card-wrapper`;
                     
                     card.innerHTML = `
                         <details class="group episode-details" data-audio-url="${audioUrl}" ${isOpen}>
@@ -398,13 +395,14 @@
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-3 gap-2">
-                                        <button onclick="skipTime(-5)" title="5 Sekunden zurück" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm">
+                                        <!-- NEU: Amber-Rahmen für die +/-5s Sprung-Buttons -->
+                                        <button onclick="skipTime(-5)" title="5 Sekunden zurück" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm border border-amber-500">
                                             <span>-5s</span>
                                         </button>
                                         <button onclick="toggleAudio('${audioUrl}', this)" title="Start / Pause" class="py-2.5 px-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm play-btn">
                                             <span>Start</span>
                                         </button>
-                                        <button onclick="skipTime(5)" title="5 Sekunden vor" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm">
+                                        <button onclick="skipTime(5)" title="5 Sekunden vor" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm border border-amber-500">
                                             <span>+5s</span>
                                         </button>
                                     </div>
