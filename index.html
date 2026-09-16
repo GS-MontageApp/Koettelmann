@@ -13,6 +13,27 @@
             scroll-behavior: smooth;
             -webkit-tap-highlight-color: transparent;
         }
+        /* Custom Styling für den Range-Slider auf mobilen Geräten */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+            margin-top: -4px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 9999px;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-900">
@@ -24,7 +45,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.6</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.7</span>
         </div>
     </header>
 
@@ -45,11 +66,13 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Akkordeon & Permanente Audio-Steuerung -->
+    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Steuerung & Fortschrittsbalken -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
         let activePlayButton = null;
+        let activeProgressBar = null;
+        let activeCurrentTimeEl = null;
 
         const WORKER_URL = "https://koettelmann-proxy.m3-jost.workers.dev/?url=";
         const TARGET_WDR_URL = "https://www1.wdr.de/mediathek/audio/wdr4/autohaus-koettelmann/index.html";
@@ -102,7 +125,7 @@
                                 <span class="font-semibold text-amber-400 text-base">${title}</span>
                                 <span class="transform transition-transform duration-200 group-open:rotate-180 text-slate-400 text-sm">&#9660;</span>
                             </summary>
-                            <div class="mt-4 pt-3 border-t border-slate-700/60 space-y-2 text-sm text-slate-300">
+                            <div class="mt-4 pt-3 border-t border-slate-700/60 space-y-3 text-sm text-slate-300">
                                 <div class="flex justify-between">
                                     <span class="text-slate-400">Veröffentlichung:</span>
                                     <span class="font-medium">${date}</span>
@@ -116,7 +139,16 @@
                                     <span class="font-medium text-emerald-400">${expires}</span>
                                 </div>
                                 ${audioUrl ? `
-                                <div class="pt-3">
+                                <div class="pt-2 space-y-2">
+                                    <!-- Fortschrittsbalken und Zeiten -->
+                                    <div class="space-y-1">
+                                        <input type="range" value="0" max="100" class="w-full progress-bar" oninput="seekAudio(this.value)">
+                                        <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+                                            <span class="current-time">00:00</span>
+                                            <span class="duration-time">${duration || '00:00'}</span>
+                                        </div>
+                                    </div>
+                                    <!-- Steuerungbuttons -->
                                     <div class="grid grid-cols-3 gap-2">
                                         <button onclick="skipTime(-5)" title="5 Sekunden zurück" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm">
                                             <span>-5s</span>
@@ -155,30 +187,54 @@
         }
 
         function toggleAudio(url, btnElement) {
-            // Wenn ein anderes Audio lief, dessen Button auf "Start" zurücksetzen
+            const cardDetails = btnElement.closest('details');
+            const progressBar = cardDetails.querySelector('.progress-bar');
+            const currentTimeEl = cardDetails.querySelector('.current-time');
+            const durationEl = cardDetails.querySelector('.duration-time');
+
+            // Wenn ein anderes Audio lief, dessen UI zurücksetzen
             if (activeAudio && activeAudioUrl !== url && activePlayButton) {
                 activeAudio.pause();
                 activePlayButton.innerText = "Start";
+                if (activeProgressBar) activeProgressBar.value = 0;
             }
 
             if (!activeAudio || activeAudioUrl !== url) {
-                // Neues Audio starten
                 if (activeAudio) activeAudio.pause();
                 activeAudio = new Audio(url);
                 activeAudioUrl = url;
                 activePlayButton = btnElement;
+                activeProgressBar = progressBar;
+                activeCurrentTimeEl = currentTimeEl;
+
+                activeAudio.addEventListener('loadedmetadata', () => {
+                    if (durationEl && activeAudio.duration) {
+                        durationEl.innerText = formatTime(activeAudio.duration);
+                    }
+                });
+
+                activeAudio.addEventListener('timeupdate', () => {
+                    if (activeAudio && activeProgressBar) {
+                        const progress = (activeAudio.currentTime / activeAudio.duration) * 100;
+                        activeProgressBar.value = isNaN(progress) ? 0 : progress;
+                        if (activeCurrentTimeEl) {
+                            activeCurrentTimeEl.innerText = formatTime(activeAudio.currentTime);
+                        }
+                    }
+                });
 
                 activeAudio.play().catch(() => {});
                 btnElement.innerText = "Pause";
 
                 activeAudio.onended = () => {
                     btnElement.innerText = "Start";
+                    if (progressBar) progressBar.value = 0;
+                    if (currentTimeEl) currentTimeEl.innerText = "00:00";
                     activeAudio = null;
                     activeAudioUrl = null;
                     activePlayButton = null;
                 };
             } else {
-                // Gleiches Audio: Zwischen Play und Pause wechseln
                 if (activeAudio.paused) {
                     activeAudio.play().catch(() => {});
                     btnElement.innerText = "Pause";
@@ -191,7 +247,7 @@
         }
 
         function skipTime(seconds) {
-            if (activeAudio) {
+            if (activeAudio && activeAudio.duration) {
                 let newTime = activeAudio.currentTime + seconds;
                 if (newTime < 0) newTime = 0;
                 if (newTime > activeAudio.duration) newTime = activeAudio.duration;
@@ -199,10 +255,24 @@
             }
         }
 
+        function seekAudio(value) {
+            if (activeAudio && activeAudio.duration) {
+                const seekTime = (value / 100) * activeAudio.duration;
+                activeAudio.currentTime = seekTime;
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && activeAudio) {
                 activeAudio.pause();
                 if (activePlayButton) activePlayButton.innerText = "Start";
+                if (activeProgressBar) activeProgressBar.value = 0;
                 activeAudio = null;
                 activeAudioUrl = null;
                 activePlayButton = null;
