@@ -44,7 +44,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.10</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.11</span>
         </div>
     </header>
 
@@ -65,7 +65,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Steuerung & 20-Sekunden-Restlaufzeit Gehört-Logik -->
+    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Steuerung, Gehört-Status & Favoriten-Stern -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -76,15 +76,15 @@
 
         const WORKER_URL = "https://koettelmann-proxy.m3-jost.workers.dev/?url=";
         const TARGET_WDR_URL = "https://www1.wdr.de/mediathek/audio/wdr4/autohaus-koettelmann/index.html";
-        const STORAGE_KEY = "koettelmann_completed_episodes";
+        const STORAGE_KEY_COMPLETED = "koettelmann_completed_episodes";
+        const STORAGE_KEY_FAVORITES = "koettelmann_favorite_episodes";
 
+        // LocalStorage Hilfsfunktionen für Gehört-Status
         function getCompletedEpisodes() {
             try {
-                const data = localStorage.getItem(STORAGE_KEY);
+                const data = localStorage.getItem(STORAGE_KEY_COMPLETED);
                 return data ? JSON.parse(data) : [];
-            } catch (e) {
-                return [];
-            }
+            } catch (e) { return []; }
         }
 
         function markEpisodeAsCompleted(url) {
@@ -92,12 +92,50 @@
             const completed = getCompletedEpisodes();
             if (!completed.includes(url)) {
                 completed.push(url);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
+                localStorage.setItem(STORAGE_KEY_COMPLETED, JSON.stringify(completed));
             }
         }
 
         function isEpisodeCompleted(url) {
             return getCompletedEpisodes().includes(url);
+        }
+
+        // LocalStorage Hilfsfunktionen für Favoriten
+        function getFavoriteEpisodes() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY_FAVORITES);
+                return data ? JSON.parse(data) : [];
+            } catch (e) { return []; }
+        }
+
+        function toggleFavoriteEpisode(url, event) {
+            event.stopPropagation(); // Verhindert das Auf/Zuklappen der Akkordeon-Karte beim Stern-Klick
+            if (!url) return;
+            
+            const favorites = getFavoriteEpisodes();
+            const index = favorites.indexOf(url);
+            let isFav = false;
+
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(url);
+                isFav = true;
+            }
+
+            localStorage.setItem(STORAGE_KEY_FAVORITES, JSON.stringify(favorites));
+
+            // Visuelles Update des Sterns direkt im DOM
+            const starBtn = event.currentTarget;
+            if (isFav) {
+                starBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-400 fill-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>`;
+            } else {
+                starBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 hover:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`;
+            }
+        }
+
+        function isEpisodeFavorite(url) {
+            return getFavoriteEpisodes().includes(url);
         }
 
         async function fetchAndParseLiveWDR() {
@@ -139,9 +177,9 @@
 
                     const isOpen = (index === 0) ? 'open' : '';
                     const completed = audioUrl && isEpisodeCompleted(audioUrl);
+                    const isFav = audioUrl && isEpisodeFavorite(audioUrl);
 
                     const card = document.createElement('div');
-                    // Deutlich sichtbarer dicker Rahmen (border-2) bei Gehört-Status
                     const cardBorderClass = completed ? "border-2 border-emerald-500" : "border border-slate-700";
                     card.className = `bg-slate-800 ${cardBorderClass} rounded-2xl p-5 shadow-sm transition hover:border-slate-600 episode-card-wrapper`;
                     
@@ -150,6 +188,14 @@
                             <summary class="flex justify-between items-center cursor-pointer list-none">
                                 <span class="font-semibold text-amber-400 text-base pr-2">${title}</span>
                                 <div class="flex items-center space-x-2 flex-shrink-0">
+                                    <!-- Favoriten-Stern -->
+                                    ${audioUrl ? `
+                                    <button onclick="toggleFavoriteEpisode('${audioUrl}', event)" title="Als Favorit markieren" class="p-1 transition active:scale-95 focus:outline-none">
+                                        ${isFav ? `
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-400 fill-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>` : `
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 hover:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`}
+                                    </button>` : ''}
+                                    <!-- Gehört-Badge -->
                                     <span class="status-badge text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/60 ${completed ? '' : 'hidden'}">✓ Gehört</span>
                                     <span class="transform transition-transform duration-200 group-open:rotate-180 text-slate-400 text-sm">&#9660;</span>
                                 </div>
@@ -248,7 +294,7 @@
                             activeCurrentTimeEl.innerText = formatTime(activeAudio.currentTime);
                         }
 
-                        // Neue Logik: Wenn nur noch 20 Sekunden oder weniger übrig sind
+                        // Markieren als gehört bei $\le 20$ Sek Restlaufzeit
                         if (activeAudio.duration && (activeAudio.duration - activeAudio.currentTime) <= 20) {
                             markAsCompletedInUI(cardDetails, url);
                         }
