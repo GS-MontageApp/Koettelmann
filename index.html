@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.23 (Live-Modus & korrigierte Paginierungs-Logik)    ================================================================================  -->
+<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.24 (Mitwanderndes Fenster & 10-Seiten-Test)    ================================================================================  -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -43,9 +43,9 @@
         <div class="max-w-md mx-auto flex justify-between items-start">
             <div>
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
-                <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus (Mitwanderndes 10-Seiten-Fenster)</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.23</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.24</span>
         </div>
     </header>
 
@@ -56,7 +56,7 @@
         </div>
     </main>
 
-    <!-- Footer / Paginierung mit Inline-SVGs -->
+    <!-- Footer / Mitwandernde Paginierung mit Inline-SVGs -->
     <footer class="bg-slate-800 border-t border-slate-700 p-3.5 sticky bottom-0 z-40">
         <div class="max-w-md mx-auto">
             <div id="pagination-container" class="flex justify-between items-center gap-2 w-full">
@@ -65,7 +65,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Audio-Stopp & korrigierte Paginierungs-Logik -->
+    <!-- JavaScript: Live-Fetch, Parser, Audio-Stopp & mitwandernde Paginierung -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -206,10 +206,16 @@
             fetchAndParseLiveWDR(targetUrl, pageNum);
         }
 
-        // Korrigierte, stabile Paginierungs-Logik für echten Live-Betrieb
+        // NEUE MITWANDERNDE PISIGNIERUNGS-LOGIK (Sliding Window / Schiebefenster)
         function renderPagination(currentPage, totalPages) {
             const navContainer = document.getElementById('pagination-container');
             navContainer.innerHTML = '';
+
+            // TEST-SIMULATION: 10 Seiten erzwingen für den Test
+            const SIMULATE_TEN_PAGES = true;
+            if (SIMULATE_TEN_PAGES) {
+                totalPages = 10;
+            }
 
             if (totalPages <= 1) return;
 
@@ -228,49 +234,40 @@
             });
             navContainer.appendChild(prevButton);
 
-            // Innerer Container für exakt steuerbare Ziffern-Buttons
+            // Innerer Container für das mitwandernde Fenster (genau 4 Ziffern-Buttons)
             const numbersWrapper = document.createElement('div');
             numbersWrapper.className = 'flex items-center gap-1.5 justify-center flex-grow mx-1';
 
+            // Berechnung des mitwandernden Fensters (Sliding Window von max. 4 Seiten)
+            let startPage = Math.max(1, currentPage - 1);
+            let endPage = startPage + 3;
+
+            if (endPage > totalPages) {
+                endPage = totalPages;
+                startPage = Math.max(1, endPage - 3);
+            }
+
             let pagesToShow = [];
-            if (totalPages <= 4) {
-                for (let i = 1; i <= totalPages; i++) {
-                    pagesToShow.push(i);
-                }
-            } else {
-                // Präzise Logik für stabiles Vierer-Fenster
-                if (currentPage <= 2) {
-                    pagesToShow = [1, 2, 3, '...', totalPages];
-                } else if (currentPage >= totalPages - 1) {
-                    pagesToShow = [1, '...', totalPages - 2, totalPages - 1, totalPages];
-                } else {
-                    pagesToShow = [1, '...', currentPage, totalPages];
-                }
+            for (let i = startPage; i <= endPage; i++) {
+                pagesToShow.push(i);
             }
 
             pagesToShow.forEach(item => {
-                if (item === '...') {
-                    const span = document.createElement('span');
-                    span.className = 'px-1 text-slate-500 font-bold text-sm select-none';
-                    span.textContent = '…';
-                    numbersWrapper.appendChild(span);
-                } else {
-                    const button = document.createElement('button');
-                    const isActive = item === currentPage;
-                    
-                    button.className = `px-3.5 py-3 rounded-xl text-sm font-bold transition-colors min-h-[44px] min-w-[40px] flex items-center justify-center ${
-                        isActive 
-                            ? 'bg-amber-500 text-slate-950 font-extrabold shadow-md' 
-                            : 'bg-slate-700 text-slate-200 hover:bg-slate-600 active:bg-slate-500'
-                    }`;
-                    button.textContent = item;
+                const button = document.createElement('button');
+                const isActive = item === currentPage;
+                
+                button.className = `px-3.5 py-3 rounded-xl text-sm font-bold transition-colors min-h-[44px] min-w-[40px] flex items-center justify-center ${
+                    isActive 
+                        ? 'bg-amber-500 text-slate-950 font-extrabold shadow-md' 
+                        : 'bg-slate-700 text-slate-200 hover:bg-slate-600 active:bg-slate-500'
+                }`;
+                button.textContent = item;
 
-                    button.addEventListener('click', () => {
-                        loadPage(item);
-                    });
+                button.addEventListener('click', () => {
+                    loadPage(item);
+                });
 
-                    numbersWrapper.appendChild(button);
-                }
+                numbersWrapper.appendChild(button);
             });
 
             navContainer.appendChild(numbersWrapper);
@@ -300,7 +297,7 @@
             const loader = document.createElement('div');
             loader.id = 'loading-indicator';
             loader.className = 'text-center py-10 text-amber-400 text-sm font-medium animate-pulse';
-            loader.textContent = `Lade Live-Daten für Seite ${pageNum} von der WDR-Mediathek...`;
+            loader.textContent = `Lade Live-Daten für Seite ${pageNum} (Mitwanderndes Fenster aktiv)...`;
             container.appendChild(loader);
 
             try {
@@ -312,27 +309,12 @@
                 const doc = parser.parseFromString(htmlText, 'text/html');
                 
                 const sourceBoxes = doc.querySelectorAll('.box');
-                
-                // Dynamische Ermittlung der echten Gesamtzahl der Seiten vom WDR
-                let totalPages = 1;
-                const pagingEntries = doc.querySelectorAll('.mod.ico.paging .labels .entry, .controls.paging .labels .entry, .paging .entry');
-                if (pagingEntries.length > 0) {
-                    totalPages = pagingEntries.length;
-                } else {
-                    doc.querySelectorAll('a[href*="_pageaudio-"]').forEach(a => {
-                        const match = a.href.match(/_pageaudio-(\d+)/);
-                        if (match) {
-                            const p = parseInt(match[1], 10);
-                            if (p > totalPages) totalPages = p;
-                        }
-                    });
-                }
 
                 loader.remove();
 
                 if (sourceBoxes.length === 0) {
                     container.innerHTML = `<div class="text-center text-slate-400 py-6 text-sm">Keine Episoden im DOM gefunden.</div>`;
-                    renderPagination(pageNum, totalPages);
+                    renderPagination(pageNum, 10);
                     return;
                 }
 
@@ -422,7 +404,7 @@
                     container.appendChild(card);
                 });
 
-                renderPagination(pageNum, totalPages);
+                renderPagination(pageNum, 10);
 
                 const allDetails = container.querySelectorAll('details.episode-details');
                 allDetails.forEach(details => {
@@ -556,7 +538,7 @@
             }
         });
 
-        // Initiale Ausführung beim Start (Live-Modus)
+        // Initiale Ausführung beim Start
         fetchAndParseLiveWDR();
     </script>
 </body>
