@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v0.0.31 === -->
+<!-- === KÖTTELMANN APP - Version v0.0.33 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -76,7 +76,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.31</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.33</span>
         </div>
     </header>
 
@@ -113,12 +113,12 @@
         const STORAGE_KEY_SPLASH = "koettelmann_splash_date";
         const STORAGE_KEY_INSTALLED = "koettelmann_installed";
 
-        // Service Worker registrieren
+        // Service Worker registrieren mit absolut robustem Scope für GitHub Pages
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker registriert:', reg.scope))
-                    .catch(err => console.log('Service Worker Fehler:', err));
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then(reg => console.log('Service Worker erfolgreich registriert:', reg.scope))
+                    .catch(err => console.log('Service Worker Registrierung fehlgeschlagen:', err));
             });
         }
 
