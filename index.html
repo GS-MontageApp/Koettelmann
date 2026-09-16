@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v0.0.29 === -->
+<!-- === KÖTTELMANN APP - Version v0.0.30 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -53,7 +53,11 @@
             <button id="install-btn" onclick="triggerInstall()" class="w-full py-3.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition shadow-md active:scale-95 text-sm flex items-center justify-center space-x-2 border border-amber-400">
                 <span>Web-App installieren</span>
             </button>
-            <p id="install-hint" class="text-[11px] text-slate-500 hidden">Falls der Button nicht reagiert, nutze bitte das Browser-Menü (Teilen / Zum Startbildschirm hinzufügen).</p>
+            <div id="install-instructions" class="text-[11px] text-slate-400 bg-slate-800/80 p-3 rounded-xl border border-slate-700/50 text-left space-y-1">
+                <p class="font-semibold text-amber-400">Falls Chrome die Installation blockiert:</p>
+                <p>1. Tippe oben rechts auf die 3 Punkte (Menü).</p>
+                <p>2. Wähle <b>„App installieren…“</b> oder <b>„Zum Startbildschirm hinzufügen“</b>.</p>
+            </div>
         </div>
     </div>
 
@@ -72,7 +76,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.29</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.30</span>
         </div>
     </header>
 
@@ -92,7 +96,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: PWA-Gatekeeper, Live-Fetch, Parser, Audio & Splash -->
+    <!-- JavaScript: Service Worker Registrar, Gatekeeper, Live-Fetch & Audio -->
     <script>
         let deferredPrompt = null;
         let activeAudio = null;
@@ -109,6 +113,15 @@
         const STORAGE_KEY_SPLASH = "koettelmann_splash_date";
         const STORAGE_KEY_INSTALLED = "koettelmann_installed";
 
+        // Service Worker registrieren, damit Chrome die App als echte PWA validiert
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registriert mit Scope:', reg.scope))
+                    .catch(err => console.log('Service Worker Registrierung fehlgeschlagen:', err));
+            });
+        }
+
         // PWA Installations-Event abfangen
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -120,21 +133,12 @@
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
             const isMarkedInstalled = localStorage.getItem(STORAGE_KEY_INSTALLED) === 'true';
 
-            // Wenn WEDER im Standalone-Modus NOCH als installiert markiert: Gatekeeper anzeigen!
             if (!isStandalone && !isMarkedInstalled) {
                 const gatekeeper = document.getElementById('install-gatekeeper');
-                if (gatekeeper) {
-                    gatekeeper.classList.remove('hidden');
-                    // Falls nach kurzer Zeit kein Prompt da ist, Hilfetext einblenden
-                    setTimeout(() => {
-                        const hint = document.getElementById('install-hint');
-                        if (hint) hint.classList.remove('hidden');
-                    }, 2000);
-                }
-                return false; // App-Laden stoppen
+                if (gatekeeper) gatekeeper.classList.remove('hidden');
+                return false;
             }
 
-            // Ansonsten: App ist installiert -> Gatekeeper verstecken, Splash/Inhalt laden
             const gatekeeper = document.getElementById('install-gatekeeper');
             if (gatekeeper) gatekeeper.classList.add('hidden');
             
@@ -156,9 +160,8 @@
                     deferredPrompt = null;
                 });
             } else {
-                // Fallback für Browser ohne automatisches Event (z. B. iOS Safari)
+                // Wenn kein Prompt bereitsteht (z.B. Chrome Menü-Hinweis wurde genutzt)
                 localStorage.setItem(STORAGE_KEY_INSTALLED, 'true');
-                alert("Bitte füge diese Seite über das Teilen-Menü deines Browsers zum Startbildschirm hinzu.");
                 const gatekeeper = document.getElementById('install-gatekeeper');
                 if (gatekeeper) gatekeeper.classList.add('hidden');
                 checkAppLaunchState();
@@ -172,9 +175,7 @@
             
             if (lastSplashDate !== todayStr) {
                 const splashEl = document.getElementById('splash-screen');
-                if (splashEl) {
-                    splashEl.classList.remove('hidden');
-                }
+                if (splashEl) splashEl.classList.remove('hidden');
             }
         }
 
@@ -324,7 +325,6 @@
 
             if (totalPages <= 1) return;
 
-            // Linker Pfeil-Button
             const prevButton = document.createElement('button');
             prevButton.className = `px-5 py-3 rounded-xl transition flex items-center justify-center min-h-[44px] min-w-[50px] ${
                 currentPage <= 1 
@@ -339,7 +339,6 @@
             });
             navContainer.appendChild(prevButton);
 
-            // Ziffern-Fenster (Sliding Window)
             const numbersWrapper = document.createElement('div');
             numbersWrapper.className = 'flex items-center gap-1.5 justify-center flex-grow mx-1';
 
@@ -376,7 +375,6 @@
 
             navContainer.appendChild(numbersWrapper);
 
-            // Rechter Pfeil-Button
             const nextButton = document.createElement('button');
             nextButton.className = `px-5 py-3 rounded-xl transition flex items-center justify-center min-h-[44px] min-w-[50px] ${
                 currentPage >= totalPages 
@@ -392,10 +390,8 @@
             navContainer.appendChild(nextButton);
         }
 
-        // Hauptfunktion zum Live-Laden und Parsen
         async function fetchAndParseLiveWDR(targetUrl = BASE_TARGET_URL + "index.html", pageNum = 1) {
             const container = document.getElementById('episode-container');
-            
             container.innerHTML = '';
 
             const loader = document.createElement('div');
@@ -465,13 +461,11 @@
                             <summary class="flex justify-between items-center cursor-pointer list-none">
                                 <span class="font-semibold text-amber-400 text-base pr-2">${title}</span>
                                 <div class="flex items-center space-x-2 flex-shrink-0" onclick="event.stopPropagation()">
-                                    <!-- Gehört-Badge -->
                                     ${audioUrl ? `
                                     <button onclick="toggleCompletedEpisode('${audioUrl}', event)" title="Status wechseln (gehört/ungehört)" class="status-badge text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/60 transition active:scale-95 ${completed ? '' : 'hidden'}">
                                         ✓ Gehört
                                     </button>` : ''}
                                     
-                                    <!-- Favoriten-Stern -->
                                     ${audioUrl ? `
                                     <button onclick="toggleFavoriteEpisode('${audioUrl}', event)" title="Als Favorit markieren" class="p-1 transition active:scale-95 focus:outline-none">
                                         ${isFav ? `
@@ -656,7 +650,7 @@
             }
         });
 
-        // App-Initialisierung beim Start
+        // Start beim Laden der App
         document.addEventListener('DOMContentLoaded', () => {
             checkAppLaunchState();
         });
