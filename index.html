@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v0.0.44 === -->
+<!-- === KÖTTELMANN APP - Version v0.0.45 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -46,18 +46,20 @@
         </div>
     </div>
 
-    <!-- Header mit integrierter Grafik im linken Bereich -->
-    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 px-4 py-3 shadow-md">
-        <div class="max-w-md mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <!-- Grafik im Header (40px Höhe / h-10) -->
-                <img src="image/header2.jpg" alt="Logo" class="h-10 w-auto rounded-lg object-cover border border-slate-700 shadow-sm flex-shrink-0">
-                <div>
-                    <h1 class="text-base font-bold tracking-wide text-amber-400 leading-tight">Autohaus Köttelmann</h1>
-                    <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
-                </div>
+    <!-- Header mit img/header2.jpg als Hintergrund und Schrift im Vordergrund -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md relative overflow-hidden">
+        <!-- Hintergrundbild mit Overlay für optimale Lesbarkeit -->
+        <div class="absolute inset-0 z-0">
+            <img src="img/header2.jpg" alt="Header Hintergrund" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px]"></div>
+        </div>
+
+        <div class="max-w-md mx-auto flex justify-between items-center px-4 py-3.5 relative z-10">
+            <div>
+                <h1 class="text-base font-bold tracking-wide text-amber-400 leading-tight drop-shadow">Autohaus Köttelmann</h1>
+                <p class="text-[11px] text-slate-300 mt-0.5 drop-shadow">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono flex-shrink-0">v0.0.44</span>
+            <span class="text-xs bg-slate-800/90 border border-slate-700 px-2.5 py-1 rounded-full text-slate-200 font-mono shadow-sm flex-shrink-0">v0.0.45</span>
         </div>
     </header>
 
@@ -414,7 +416,7 @@
                     card.dataset.audioUrl = audioUrl;
                     
                     card.innerHTML = `
-                        <!-- Wasserzeichen-Hintergrundbild mit 35% Sichtbarkeit (opacity-35) im offenen Zustand -->
+                        <!-- Wasserzeichen-Hintergrundbild mit 35% Sichtbarkeit im offenen Zustand -->
                         <div class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300 flex items-center justify-center overflow-hidden z-0 watermarked-bg ${isOpen ? 'opacity-35' : ''}">
                             <img src="img/splash.jpg" alt="Wasserzeichen" class="w-full h-full object-cover">
                         </div>
@@ -535,7 +537,7 @@
             if (watermarkedBg) {
                 if (!isHidden) {
                     watermarkedBg.classList.remove('opacity-0');
-                    watermarkedBg.classList.add('opacity-35'); // 35% Sichtbarkeit
+                    watermarkedBg.classList.add('opacity-35');
                 } else {
                     watermarkedBg.classList.remove('opacity-35');
                     watermarkedBg.classList.add('opacity-0');
