@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v0.0.35 === -->
+<!-- === KÖTTELMANN APP - Version v0.0.36 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -41,7 +41,7 @@
     <!-- Splash Screen Overlay (Einmal täglich beim ersten Start) -->
     <div id="splash-screen" class="fixed inset-0 z-40 bg-slate-950 flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden cursor-pointer" onclick="dismissSplashScreen()" title="Zum Fortfahren antippen">
         <div class="max-w-sm w-full text-center space-y-4">
-            <img src="img/splash.jpg" alt="Autohaus Köttelmann Splash" class="w-full rounded-2xl shadow-2xl border-2 border-amber-500 object-cover max-h-[75vh]">
+            <img src="img/splash.jpeg" alt="Autohaus Köttelmann Splash" class="w-full rounded-2xl shadow-2xl border-2 border-amber-500 object-cover max-h-[75vh]">
             <p class="text-xs text-amber-400 font-medium animate-pulse">Zum Starten aufs Display tippen...</p>
         </div>
     </div>
@@ -53,7 +53,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.35</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.36</span>
         </div>
     </header>
 
@@ -389,10 +389,16 @@
 
                     const card = document.createElement('div');
                     const cardBorderClass = completed ? "border-2 border-emerald-500" : "border-2 border-amber-500";
-                    card.className = `bg-slate-800 ${cardBorderClass} rounded-2xl p-5 shadow-sm transition hover:opacity-95 episode-card-wrapper`;
+                    // relative overflow-hidden für das absolute Wasserzeichen-Hintergrundbild
+                    card.className = `bg-slate-800 ${cardBorderClass} rounded-2xl p-5 shadow-sm transition hover:opacity-95 episode-card-wrapper relative overflow-hidden`;
                     
                     card.innerHTML = `
-                        <details class="group episode-details" data-audio-url="${audioUrl}" ${isOpen}>
+                        <!-- Wasserzeichen: Wird nur angezeigt, wenn details im open-Zustand ist -->
+                        <div class="absolute inset-0 pointer-events-none opacity-0 group-open:opacity-12 transition-opacity duration-300 flex items-center justify-center overflow-hidden z-0">
+                            <img src="img/splash.jpeg" alt="Wasserzeichen" class="w-full h-full object-cover">
+                        </div>
+
+                        <details class="group episode-details relative z-10" data-audio-url="${audioUrl}" ${isOpen}>
                             <summary class="flex justify-between items-center cursor-pointer list-none">
                                 <span class="font-semibold text-amber-400 text-base pr-2">${title}</span>
                                 <div class="flex items-center space-x-2 flex-shrink-0" onclick="event.stopPropagation()">
