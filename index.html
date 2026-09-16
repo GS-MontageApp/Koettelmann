@@ -1,4 +1,4 @@
-<!--    ================================================================================   KÖTTELMANN APP  - Version v0.0.27    ================================================================================  -->
+<!-- === KÖTTELMANN APP - Version v0.0.28 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -38,14 +38,22 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-900">
 
+    <!-- Splash Screen Overlay (Einmal täglich beim ersten Start) -->
+    <div id="splash-screen" class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden cursor-pointer" onclick="dismissSplashScreen()" title="Zum Fortfahren antippen">
+        <div class="max-w-sm w-full text-center space-y-4">
+            <img src="img/splash.jpg" alt="Autohaus Köttelmann Splash" class="w-full rounded-2xl shadow-2xl border-2 border-amber-500 object-cover max-h-[75vh]">
+            <p class="text-xs text-amber-400 font-medium animate-pulse">Zum Starten aufs Display tippen...</p>
+        </div>
+    </div>
+
     <!-- Header -->
-    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50 px-4 py-3 shadow-md">
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 px-4 py-3 shadow-md">
         <div class="max-w-md mx-auto flex justify-between items-start">
             <div>
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.27</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.28</span>
         </div>
     </header>
 
@@ -57,7 +65,7 @@
     </main>
 
     <!-- Footer / Mitwandernde Paginierung -->
-    <footer class="bg-slate-800 border-t border-slate-700 p-3.5 sticky bottom-0 z-40">
+    <footer class="bg-slate-800 border-t border-slate-700 p-3.5 sticky bottom-0 z-30">
         <div class="max-w-md mx-auto">
             <div id="pagination-container" class="flex justify-between items-center gap-2 w-full">
                 <!-- Wird per JS befüllt -->
@@ -65,7 +73,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Audio-Stopp & aktualisierte Karten-/Button-Rahmen -->
+    <!-- JavaScript: Live-Fetch, Parser, Audio, Splash-Screen & Navigation -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -78,6 +86,32 @@
         const BASE_TARGET_URL = "https://www1.wdr.de/mediathek/audio/wdr4/autohaus-koettelmann/";
         const STORAGE_KEY_COMPLETED = "koettelmann_completed_episodes";
         const STORAGE_KEY_FAVORITES = "koettelmann_favorite_episodes";
+        const STORAGE_KEY_SPLASH = "koettelmann_splash_date";
+
+        // Splash Screen Logik (einmal täglich beim ersten Start)
+        function checkAndShowSplashScreen() {
+            const todayStr = new Date().toDateString();
+            const lastSplashDate = localStorage.getItem(STORAGE_KEY_SPLASH);
+            
+            if (lastSplashDate !== todayStr) {
+                const splashEl = document.getElementById('splash-screen');
+                if (splashEl) {
+                    splashEl.classList.remove('hidden');
+                }
+            }
+        }
+
+        function dismissSplashScreen() {
+            const splashEl = document.getElementById('splash-screen');
+            if (splashEl) {
+                splashEl.classList.add('opacity-0');
+                setTimeout(() => {
+                    splashEl.classList.add('hidden');
+                    splashEl.classList.remove('opacity-0');
+                }, 300);
+                localStorage.setItem(STORAGE_KEY_SPLASH, new Date().toDateString());
+            }
+        }
 
         // Hilfsfunktion zur Formatierung des Datums
         function formatFullDate(rawDateStr) {
@@ -346,7 +380,6 @@
                     const isFav = audioUrl && isEpisodeFavorite(audioUrl);
 
                     const card = document.createElement('div');
-                    // NEU: Standardmäßig Amber-Rahmen, bei completed auf Grün wechselnd
                     const cardBorderClass = completed ? "border-2 border-emerald-500" : "border-2 border-amber-500";
                     card.className = `bg-slate-800 ${cardBorderClass} rounded-2xl p-5 shadow-sm transition hover:opacity-95 episode-card-wrapper`;
                     
@@ -395,7 +428,6 @@
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-3 gap-2">
-                                        <!-- NEU: Amber-Rahmen für die +/-5s Sprung-Buttons -->
                                         <button onclick="skipTime(-5)" title="5 Sekunden zurück" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm border border-amber-500">
                                             <span>-5s</span>
                                         </button>
@@ -547,8 +579,11 @@
             }
         });
 
-        // Initiale Ausführung beim Start
-        fetchAndParseLiveWDR();
+        // Initialer Start beim Laden der App
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAndShowSplashScreen();
+            fetchAndParseLiveWDR();
+        });
     </script>
 </body>
 </html>
