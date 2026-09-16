@@ -1,5 +1,5 @@
-// === KÖTTELMANN APP - Service Worker v42 ===
-const CACHE_NAME = 'koettelmann-v42';
+// === KÖTTELMANN APP - Service Worker v43 (Network-First Strategie) ===
+const CACHE_NAME = 'koettelmann-v43';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -37,11 +37,39 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('workers.dev')) {
+  const requestUrl = new URL(event.request.url);
+
+  // Externe Anfragen (Cloudflare Proxy / WDR API) direkt durchlassen
+  if (requestUrl.origin !== location.origin || requestUrl.search.includes('workers.dev')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
+  // Network-First Strategie für HTML / Einstiegspunkt (index.html)
+  if (event.request.mode === 'navigate' || requestUrl.pathname.endsWith('.html') || requestUrl.pathname.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+            // Wenn Server antwortet, Cache im Hintergrund aktualisieren
+            if (networkResponse && networkResponse.status === 200) {
+                const responseClone = networkResponse.clone();
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(event.request, responseClone);
+                });
+            }
+            return networkResponse;
+        })
+        .catch(() => {
+            // Offline-Fallback auf den Cache
+            return caches.match(event.request).then((cachedResponse) => {
+                return cachedResponse || caches.match('./index.html');
+            });
+        })
+    );
+    return;
+  }
+
+  // Cache-First Strategie für statische Assets (Bilder, Manifest, Icons)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request).catch(() => {
