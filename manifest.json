@@ -3,6 +3,7 @@
   "short_name": "Köttelmann",
   "description": "Live-Mediathek und Audioplayer für Autohaus Köttelmann",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
