@@ -44,7 +44,7 @@
                 <h1 class="text-lg font-bold tracking-wide text-amber-400">Autohaus Köttelmann</h1>
                 <p class="text-[11px] text-slate-400 mt-0.5">Live-Modus via Worker</p>
             </div>
-            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.13</span>
+            <span class="text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">v0.0.14</span>
         </div>
     </header>
 
@@ -65,7 +65,7 @@
         </div>
     </footer>
 
-    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Steuerung, Gehört-Toggle, Favoriten & Wochentag-Erkennung -->
+    <!-- JavaScript: Live-Fetch, Parser, Akkordeon, Audio-Stopp bei Einklappen/Wechsel -->
     <script>
         let activeAudio = null;
         let activeAudioUrl = null;
@@ -79,10 +79,8 @@
         const STORAGE_KEY_COMPLETED = "koettelmann_completed_episodes";
         const STORAGE_KEY_FAVORITES = "koettelmann_favorite_episodes";
 
-        // Hilfsfunktion zur Formatierung des Datums mit Wochentag
         function formatFullDate(rawDateStr) {
             if (!rawDateStr) return '';
-            // Versuche ein Datum im Format TT.MM.JJJJ zu finden
             const parts = rawDateStr.match(/(\d{2})\.(\d{2})\.(\d{4})/);
             if (parts) {
                 const day = parseInt(parts[1], 10);
@@ -94,10 +92,9 @@
                     return dateObj.toLocaleDateString('de-DE', options);
                 }
             }
-            return rawDateStr; // Fallback, falls kein passendes Format vorliegt
+            return rawDateStr;
         }
 
-        // LocalStorage Hilfsfunktionen für Gehört-Status
         function getCompletedEpisodes() {
             try {
                 const data = localStorage.getItem(STORAGE_KEY_COMPLETED);
@@ -153,7 +150,6 @@
             }
         }
 
-        // LocalStorage Hilfsfunktionen für Favoriten
         function getFavoriteEpisodes() {
             try {
                 const data = localStorage.getItem(STORAGE_KEY_FAVORITES);
@@ -299,16 +295,27 @@
                     container.appendChild(card);
                 });
 
-                // Exklusive Akkordeon-Logik (immer nur eine Karte offen)
+                // Exklusive Akkordeon-Logik & automatischer Audio-Stopp beim Einklappen
                 const allDetails = container.querySelectorAll('details.episode-details');
                 allDetails.forEach(details => {
                     details.addEventListener('toggle', () => {
+                        const cardAudioUrl = details.dataset.audioUrl;
+
                         if (details.open) {
+                            // Andere Karten schließen
                             allDetails.forEach(other => {
                                 if (other !== details) {
                                     other.removeAttribute('open');
                                 }
                             });
+                        } else {
+                            // Karte wurde eingeklappt: Prüfen, ob genau dieses Audio lief, und ggf. stoppen
+                            if (activeAudio && activeAudioUrl === cardAudioUrl) {
+                                activeAudio.pause();
+                                if (activePlayButton) {
+                                    activePlayButton.innerText = "Weiter";
+                                }
+                            }
                         }
                     });
                 });
@@ -353,7 +360,6 @@
                             activeCurrentTimeEl.innerText = formatTime(activeAudio.currentTime);
                         }
 
-                        // Automatisch als gehört markieren bei $\le 20$ Sek Restlaufzeit
                         if (activeAudio.duration && (activeAudio.duration - activeAudio.currentTime) <= 20) {
                             markAsCompletedAutomatic(cardDetails, url);
                         }
@@ -420,15 +426,11 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && activeAudio) {
                 activeAudio.pause();
-                if (activePlayButton) activePlayButton.innerText = "Start";
+                if (activePlayButton) activePlayButton.innerText = "Weiter";
                 if (activeProgressBar) activeProgressBar.value = 0;
                 if (activeAudioUrl && activeAudio.duration && (activeAudio.duration - activeAudio.currentTime) <= 20) {
                     markAsCompletedAutomatic(activeCardDetails, activeAudioUrl);
                 }
-                activeAudio = null;
-                activeAudioUrl = null;
-                activePlayButton = null;
-                activeCardDetails = null;
             }
         });
 
