@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v50 === -->
+<!-- === KÖTTELMANN APP - Version v51 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -46,23 +46,27 @@
         </div>
     </div>
 
-    <!-- Header: 1,5-fache Höhe (h-24), glasklarer Hintergrund, AUTOHAUS/KÖTTELMANN in Großbuchstaben & 2x Schriftgröße -->
+    <!-- Header: 1,5-fache Höhe (h-24), glasklarer Hintergrund, vertikal zentriert, KÖTTELMANN weiter rechts -->
     <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md relative overflow-hidden h-24">
         <!-- Vollflächiges Hintergrundbild (absolut glasklar, ohne Overlay & ohne Blur) -->
         <div class="absolute inset-0 z-0">
             <img src="img/header2.jpg" alt="Header Hintergrund" class="w-full h-full object-cover">
         </div>
 
-        <!-- Header Inhalt im Vordergrund -->
-        <div class="max-w-md mx-auto h-full relative z-10 px-4">
-            <!-- Titel-Block rechts oben (verdoppelte Schriftgröße text-2xl, Großbuchstaben, AUTOHAUS versetzt) -->
-            <div class="absolute top-2 right-4 flex flex-col items-end">
-                <span class="text-2xl font-black tracking-wider text-white leading-tight transform -translate-x-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">AUTOHAUS</span>
-                <span class="text-2xl font-black tracking-wider text-white leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">KÖTTELMANN</span>
-            </div>
+        <!-- Header Inhalt im Vordergrund (vertikal zentriert via Flexbox) -->
+        <div class="max-w-md mx-auto h-full relative z-10 px-4 flex items-center justify-between">
             <!-- Versionsnummer links unten (fett) -->
             <div class="absolute bottom-2 left-4">
                 <span class="text-xs text-slate-200 font-mono font-bold tracking-wider drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">v47</span>
+            </div>
+
+            <!-- Platzhalter links für Layout-Balance -->
+            <div></div>
+
+            <!-- Titel-Block rechts (AUTOHAUS versetzt, KÖTTELMANN weiter rechts am Rand) -->
+            <div class="flex flex-col items-end pr-1">
+                <span class="text-2xl font-black tracking-wider text-white leading-tight transform -translate-x-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">AUTOHAUS</span>
+                <span class="text-2xl font-black tracking-wider text-white leading-tight transform translate-x-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">KÖTTELMANN</span>
             </div>
         </div>
     </header>
