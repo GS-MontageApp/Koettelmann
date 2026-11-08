@@ -1,4 +1,4 @@
-/* Köttelmann v62: Originalkarten aus v56 + ARD-Sounds-Archiv */
+/* Köttelmann v63: Originalkarten aus v56 + ARD-Sounds-Archiv */
 (function(){
 "use strict";
 const ARCHIVE_KEY="koettelmann_ard_archive_v1";
@@ -78,7 +78,7 @@ function renderCard(ep,index,pageNum,container){
   const formattedDate=fullDate(ep.publishDate);
   const duration=durationText(ep.duration);
   const audioUrl=ep.audioUrl;
-  const isOpen=expandedId ? expandedId===ep.id : (index===0&&pageNum===1);
+  const isOpen=expandedId===ep.id;
   const completed=audioUrl&&isEpisodeCompleted(audioUrl);
   const isFav=audioUrl&&isEpisodeFavorite(audioUrl);
                     const card = document.createElement('div');
@@ -252,5 +252,5 @@ function start(){
   if(!showShared())render(1,false);
   refresh();
 }
-window.KoettelmannV62={start,page,syncMini};
+window.KoettelmannV63={start,page,syncMini};
 })();

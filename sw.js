@@ -1,9 +1,9 @@
-// === KÖTTELMANN APP - Service Worker v62 ===
-const CACHE_NAME = 'koettelmann-v62';
+// === KÖTTELMANN APP - Service Worker v63 ===
+const CACHE_NAME = 'koettelmann-v63';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
-  './archive-v62.js',
+  './archive-v63.js',
   './img/splash.jpg',
   './img/icon-192.png',
   './img/icon-512.png',
