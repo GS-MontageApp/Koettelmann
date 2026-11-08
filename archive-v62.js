@@ -1,4 +1,4 @@
-/* Köttelmann v61: Originalkarten aus v56 + ARD-Sounds-Archiv */
+/* Köttelmann v62: Originalkarten aus v56 + ARD-Sounds-Archiv */
 (function(){
 "use strict";
 const ARCHIVE_KEY="koettelmann_ard_archive_v1";
@@ -77,7 +77,6 @@ function renderCard(ep,index,pageNum,container){
   const title=ep.title;
   const formattedDate=fullDate(ep.publishDate);
   const duration=durationText(ep.duration);
-  const expires=ep.availableTo?fullDate(ep.availableTo):"";
   const audioUrl=ep.audioUrl;
   const isOpen=expandedId ? expandedId===ep.id : (index===0&&pageNum===1);
   const completed=audioUrl&&isEpisodeCompleted(audioUrl);
@@ -127,31 +126,11 @@ function renderCard(ep,index,pageNum,container){
                                     <span class="text-slate-400">Laufzeit:</span>
                                     <span class="font-medium">${escapeHtml(duration)}</span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Verfügbarkeit:</span>
-                                    <span class="font-medium text-emerald-400">${escapeHtml(expires)}</span>
-                                </div>
                                 ${audioUrl ? `
-                                <div class="pt-2 space-y-2">
-                                    <div class="space-y-1">
-                                        <input type="range" value="0" max="100" class="w-full progress-bar" oninput="seekAudio(this.value)">
-                                        <div class="flex justify-between text-[11px] text-slate-400 font-mono">
-                                            <span class="current-time">00:00</span>
-                                            <span class="duration-time">${escapeHtml(duration || '00:00')}</span>
-                                        </div>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2">
-                                        <button onclick="skipTime(-5)" title="5 Sekunden zurück" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm border border-amber-500">
-                                            <span>-5s</span>
-                                        </button>
-                                        <button data-play title="Start / Pause" class="py-2.5 px-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm play-btn">
-                                            <span>Start</span>
-                                        </button>
-                                        <button onclick="skipTime(5)" title="5 Sekunden vor" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center space-x-1 active:scale-95 text-xs shadow-sm border border-amber-500">
-                                            <span>+5s</span>
-                                        </button>
-                                    </div>
-                                </div>` : `<div class="text-xs text-amber-500 pt-2">Kein direkter Download-Link gefunden.</div>`}
+                                    <button data-play type="button" title="Folge im Player unten abspielen" class="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-sm active:scale-95 play-btn">
+                                        ▶ Folge abspielen
+                                    </button>
+                                ` : `<div class="text-xs text-amber-500 pt-2">Kein direkter Audiolink gefunden.</div>`}
                             </div>
                         </div>
                     `;
@@ -219,40 +198,53 @@ async function refresh(){
 }
 function createMini(){
   if(mini)return;
-  mini=document.createElement("div");
-  mini.className="hidden fixed bottom-[70px] left-1/2 -translate-x-1/2 z-40 max-w-md w-full px-3 py-2 bg-slate-800 border border-amber-500 rounded-t-xl shadow-lg";
-  mini.setAttribute("aria-label","Aktueller Audioplayer");
-  const row=document.createElement("div");row.className="flex items-center gap-2";
-  const title=document.createElement("span");title.id="mini-title";title.className="text-xs truncate flex-1 text-amber-400 font-bold";
-  const prev=makeButton("−5s",()=>skipTime(-5),"text-xs bg-slate-700 rounded px-2 py-2");
+  mini=document.createElement("section");
+  mini.className="hidden fixed bottom-[68px] left-1/2 -translate-x-1/2 z-40 max-w-md w-full px-4 py-3 bg-slate-800 border-x border-t border-amber-500 rounded-t-2xl shadow-2xl space-y-3";
+  mini.setAttribute("aria-label","Audioplayer");
+  const title=document.createElement("div");
+  title.id="mini-title";
+  title.className="text-amber-400 font-bold text-sm text-center truncate";
+  title.textContent="Köttelmann";
+  const progressRow=document.createElement("div");
+  progressRow.className="flex items-center gap-2";
+  const elapsed=document.createElement("span");elapsed.id="mini-current";elapsed.textContent="00:00";elapsed.className="text-[11px] font-mono text-slate-300";
+  const seek=document.createElement("input");
+  seek.type="range";seek.min="0";seek.max="100";seek.value="0";seek.id="mini-seek";
+  seek.className="flex-1 min-w-0";
+  seek.setAttribute("aria-label","Wiedergabeposition");
+  seek.addEventListener("input",()=>seekAudio(seek.value));
+  const total=document.createElement("span");total.id="mini-duration";total.textContent="00:00";total.className="text-[11px] font-mono text-slate-300";
+  progressRow.append(elapsed,seek,total);
+  const controls=document.createElement("div");
+  controls.className="grid grid-cols-3 gap-3";
+  const prev=makeButton("−5 Sek.",()=>skipTime(-5),"min-h-[52px] text-sm font-bold bg-slate-700 border border-amber-500 rounded-xl text-slate-100 active:scale-95");
   const toggle=makeButton("Pause",()=>{
     if(!activeAudio)return;
     if(activeAudio.paused)activeAudio.play().catch(()=>{});
     else activeAudio.pause();
     syncMini();
-  },"text-xs bg-amber-500 text-slate-950 font-bold rounded px-3 py-2");
+  },"min-h-[52px] text-base bg-amber-500 text-slate-950 font-extrabold rounded-xl active:scale-95");
   toggle.id="mini-toggle";
-  const next=makeButton("+5s",()=>skipTime(5),"text-xs bg-slate-700 rounded px-2 py-2");
-  row.append(title,prev,toggle,next);
-  const bottom=document.createElement("div");bottom.className="flex items-center gap-2 mt-1";
-  const seek=document.createElement("input");seek.type="range";seek.min="0";seek.max="100";seek.value="0";seek.id="mini-seek";seek.className="flex-1 min-w-0";
-  seek.setAttribute("aria-label","Wiedergabeposition");
-  seek.addEventListener("input",()=>seekAudio(seek.value));
-  const progress=document.createElement("span");progress.id="mini-progress";progress.className="text-[10px] font-mono text-slate-300";
-  bottom.append(seek,progress);mini.append(row,bottom);document.body.append(mini);
-  // Ein Playerobjekt bleibt bei Kartenschluss und Seitenwechsel bestehen.
+  const next=makeButton("+5 Sek.",()=>skipTime(5),"min-h-[52px] text-sm font-bold bg-slate-700 border border-amber-500 rounded-xl text-slate-100 active:scale-95");
+  controls.append(prev,toggle,next);
+  mini.append(title,progressRow,controls);
+  document.body.append(mini);
+  // Der Player bleibt bei zugeklappter Karte und Seitenwechsel bestehen.
   setInterval(syncMini,350);
 }
 function syncMini(){
-  if(!mini)return;
-  if(!activeAudio)return;
-  mini.classList.remove("hidden");
+  if(!mini||!activeAudio)return;
+  if(mini.classList.contains("hidden")){
+    mini.classList.remove("hidden");
+    document.querySelector("main")?.classList.add("pb-64");
+  }
   const matching=episodes.find(e=>e.audioUrl===activeAudioUrl);
   document.getElementById("mini-title").textContent=matching?.title||"Köttelmann";
   document.getElementById("mini-toggle").textContent=activeAudio.paused?"Weiter":"Pause";
   const duration=activeAudio.duration;
   document.getElementById("mini-seek").value=Number.isFinite(duration)&&duration>0?Math.min(100,100*activeAudio.currentTime/duration):0;
-  document.getElementById("mini-progress").textContent=time(activeAudio.currentTime)+" / "+time(duration);
+  document.getElementById("mini-current").textContent=time(activeAudio.currentTime);
+  document.getElementById("mini-duration").textContent=time(duration);
 }
 function start(){
   loadSaved();
@@ -260,5 +252,5 @@ function start(){
   if(!showShared())render(1,false);
   refresh();
 }
-window.KoettelmannV61={start,page,syncMini};
+window.KoettelmannV62={start,page,syncMini};
 })();
