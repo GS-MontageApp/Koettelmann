@@ -73,9 +73,6 @@
 
     <!-- Main Content Area (p-5 Card-Anker) -->
     <main class="max-w-md w-full mx-auto p-4 flex-grow space-y-4 pb-24">
-        <div id="episode-container" class="space-y-3">
-            <!-- Dynamisch generierte Live-Karten -->
-        </div>
         <div class="pt-2 pb-3">
             <button id="heard-diagnostic-toggle" type="button" aria-expanded="false" aria-controls="heard-diagnostic-panel"
                     class="text-xs text-slate-400 underline underline-offset-4 py-2 px-1">
@@ -83,6 +80,10 @@
             </button>
             <section id="heard-diagnostic-panel" class="hidden mt-2 bg-slate-800 border border-slate-600 rounded-2xl p-4 space-y-2"
                      aria-label="Hörstatus-Diagnose"></section>
+        </div>
+
+        <div id="episode-container" class="space-y-3">
+            <!-- Dynamisch generierte Live-Karten -->
         </div>
     </main>
 
