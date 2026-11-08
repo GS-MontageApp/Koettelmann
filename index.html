@@ -1,4 +1,4 @@
-<!-- === KÖTTELMANN APP - Version v60 === -->
+<!-- === KÖTTELMANN APP - Version v61 === -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <!-- Header: 1,5-fache Höhe (h-24), glasklarer Hintergrund, vertikal zentriert, v60 ganz unten links -->
+    <!-- Header: 1,5-fache Höhe (h-24), glasklarer Hintergrund, vertikal zentriert, v61 ganz unten links -->
     <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md relative overflow-hidden h-24">
         <!-- Vollflächiges Hintergrundbild (absolut glasklar, ohne Overlay & ohne Blur) -->
         <div class="absolute inset-0 z-0">
@@ -55,9 +55,9 @@
 
         <!-- Header Inhalt im Vordergrund (vertikal zentriert via Flexbox) -->
         <div class="max-w-md mx-auto h-full relative z-10 px-4 flex items-center justify-between">
-            <!-- Echte Versionsnummer ganz unten links an der Kante mit dunklem Badge (v60) -->
+            <!-- Echte Versionsnummer ganz unten links an der Kante mit dunklem Badge (v61) -->
             <div class="absolute bottom-0 left-0">
-                <span class="text-[10px] text-slate-100 font-mono font-bold px-1.5 py-0.5 rounded-tr bg-slate-950/85 border-r border-t border-slate-700/60 shadow-md tracking-wider">v60</span>
+                <span class="text-[10px] text-slate-100 font-mono font-bold px-1.5 py-0.5 rounded-tr bg-slate-950/85 border-r border-t border-slate-700/60 shadow-md tracking-wider">v61</span>
             </div>
 
             <!-- Platzhalter links für Layout-Balance -->
@@ -203,6 +203,7 @@
             const cardWrapper = event.currentTarget.closest('.episode-card-wrapper');
 
             if (index > -1) {
+                if (!window.confirm('Möchtest du diese Folge wirklich wieder auf „Ungehört“ setzen?')) return;
                 completed.splice(index, 1);
                 setCompletedEpisodes(completed);
                 updateCardVisuals(cardWrapper, false);
@@ -266,22 +267,9 @@
         }
 
         function loadPage(pageNum) {
-            if (activeAudio) {
-                activeAudio.pause();
-                activeAudio = null;
-                activeAudioUrl = null;
-                activePlayButton = null;
-                activeProgressBar = null;
-                activeCurrentTimeEl = null;
-                activeCardDetails = null;
-            }
-
-            const targetUrl = pageNum === 1 
-                ? BASE_TARGET_URL + "index.html" 
-                : BASE_TARGET_URL + `autohaus-koettelmann-104~_pageaudio-${pageNum}_type-audio.html`;
-            
-            fetchAndParseLiveWDR(targetUrl, pageNum);
+            if (window.KoettelmannV61) window.KoettelmannV61.page(pageNum);
         }
+        
 
         // Paginierung mit Sliding Window & Amber-Rahmen
         function renderPagination(currentPage, totalPages) {
@@ -503,63 +491,26 @@
 
         // Hilfsfunktion zur Steuerung des Wasserzeichens beim Aufklappen (mit 20% Opacity)
         function toggleDetails(element) {
-            let cardWrapper = element.classList.contains('episode-card-wrapper') ? element : element.closest('.episode-card-wrapper');
-            if (!cardWrapper) return;
-
-            const detailsContent = cardWrapper.querySelector('.episode-details-content');
-            const arrowIcon = cardWrapper.querySelector('.arrow-icon');
-            const watermarkedBg = cardWrapper.querySelector('.watermarked-bg');
-            const audioUrl = cardWrapper.dataset.audioUrl;
-
-            // Accordion-Verhalten: Andere Boxen schließen
-            document.querySelectorAll('.episode-card-wrapper').forEach(wrapper => {
-                if (wrapper !== cardWrapper) {
-                    const content = wrapper.querySelector('.episode-details-content');
-                    const icon = wrapper.querySelector('.arrow-icon');
-                    const bg = wrapper.querySelector('.watermarked-bg');
-                    const otherAudioUrl = wrapper.dataset.audioUrl;
-
-                    if (content && !content.classList.contains('hidden')) {
-                        content.classList.add('hidden');
-                        wrapper.classList.remove('open');
-                        if (icon) icon.classList.remove('rotate-180');
-                        if (bg) {
-                            bg.classList.remove('opacity-20');
-                            bg.classList.add('opacity-0');
-                        }
-
-                        if (activeAudio && activeAudioUrl === otherAudioUrl) {
-                            activeAudio.pause();
-                            const playBtn = wrapper.querySelector('.play-btn');
-                            if (playBtn) playBtn.innerText = "Weiter";
-                        }
-                    }
-                }
+            const card = element.closest('.episode-card-wrapper');
+            if (!card) return;
+            const detail = card.querySelector('.episode-details-content');
+            if (!detail) return;
+            const opening = detail.classList.contains('hidden');
+            document.querySelectorAll('.episode-card-wrapper').forEach(other => {
+                if (other === card) return;
+                other.querySelector('.episode-details-content')?.classList.add('hidden');
+                other.querySelector('.watermarked-bg')?.classList.remove('opacity-20');
+                other.querySelector('.watermarked-bg')?.classList.add('opacity-0');
+                other.classList.remove('open');
             });
-
-            // Aktuelle Box umschalten
-            const isHidden = detailsContent.classList.toggle('hidden');
-            cardWrapper.classList.toggle('open', !isHidden);
-            if (arrowIcon) arrowIcon.classList.toggle('rotate-180', !isHidden);
-            
-            if (watermarkedBg) {
-                if (!isHidden) {
-                    watermarkedBg.classList.remove('opacity-0');
-                    watermarkedBg.classList.add('opacity-20');
-                } else {
-                    watermarkedBg.classList.remove('opacity-20');
-                    watermarkedBg.classList.add('opacity-0');
-                }
-            }
-
-            if (!isHidden && activeAudio && activeAudioUrl === audioUrl) {
-                // Audio läuft im Hintergrund weiter
-            } else if (isHidden && activeAudio && activeAudioUrl === audioUrl) {
-                activeAudio.pause();
-                const playBtn = cardWrapper.querySelector('.play-btn');
-                if (playBtn) playBtn.innerText = "Weiter";
-            }
+            detail.classList.toggle('hidden', !opening);
+            card.classList.toggle('open', opening);
+            const image = card.querySelector('.watermarked-bg');
+            image?.classList.toggle('opacity-20', opening);
+            image?.classList.toggle('opacity-0', !opening);
+            // Die Audiowiedergabe wird beim Zuklappen nicht angehalten.
         }
+        
 
         function toggleAudio(url, btnElement) {
             const cardWrapper = btnElement.closest('.episode-card-wrapper');
@@ -664,10 +615,10 @@
 
         // App beim Laden initialisieren
         document.addEventListener('DOMContentLoaded', () => {
-            if (window.KoettelmannArchiveApp) window.KoettelmannArchiveApp.start();
+            if (window.KoettelmannV61) window.KoettelmannV61.start();
             else initApp();
         });
     </script>
-    <script src="./archive-manager.js" defer></script>
+    <script src="./archive-v61.js" defer></script>
 </body>
 </html>
