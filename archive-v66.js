@@ -1,4 +1,4 @@
-/* Köttelmann v65: Originalkarten aus v56 + ARD-Sounds-Archiv */
+/* Köttelmann v66: Originalkarten aus v56 + ARD-Sounds-Archiv */
 (function(){
 "use strict";
 const ARCHIVE_KEY="koettelmann_ard_archive_v1";
@@ -248,7 +248,7 @@ function syncMini(){
   document.getElementById("mini-duration").textContent=time(duration);
 }
 
-/* v65: Altes WDR-Hörprotokoll zu den ARD-Folgen zuordnen.
+/* v66: Altes WDR-Hörprotokoll zu den ARD-Folgen zuordnen.
    Die Original-URLs bleiben ausnahmslos erhalten. Kein unsicherer Titel-Raten-Abgleich. */
 const WDR_ARCHIVE_URL="https://www1.wdr.de/mediathek/audio/wdr4/autohaus-koettelmann/index.html";
 const WDR_PROXY="https://koettelmann-proxy.m3-jost.workers.dev/?url=";
@@ -387,9 +387,26 @@ async function restoreOldHeard(){
 }
 
 
-/* v65: Diagnostik ist rein lesend. Keine gespeicherte Markierung wird migriert. */
+/* v66: Diagnostik ist rein lesend. Keine gespeicherte Markierung wird migriert. */
 let diagnosticOpen=false;
 let wdrProbeMessage="Noch nicht geprüft.";
+function groupCount(map,key){map.set(key,(map.get(key)||0)+1);}
+function classifySavedEntry(value){
+  if(typeof value!=="string"||!value.trim())return {type:"Leer / kein Text",host:null};
+  const text=value.trim();
+  if(/^urn:ard:/i.test(text))return {type:"ARD-URN",host:null};
+  if(/^[0-9a-f]{8}-[0-9a-f-]{20,}$/i.test(text))return {type:"UUID / Folgen-ID",host:null};
+  if(/^\d+$/.test(text))return {type:"Numerische Kennung",host:null};
+  let u;
+  try{u=new URL(text);}catch(_){
+    return {type:/\.mp3(?:\?|$)/i.test(text)?"Relativer Audio-Pfad":"Sonstige Kennung / Text",host:null};
+  }
+  if(!["http:","https:"].includes(u.protocol))return {type:"Anderes URL-Schema",host:null};
+  const host=u.hostname.toLowerCase();
+  const pathname=u.pathname.toLowerCase();
+  const isAudio=/\.(mp3|m4a|aac|mp4|ogg)(?:$)/i.test(pathname)||/audio|media|stream|podcast/i.test(pathname);
+  return {type:isAudio?"Audio-URL (HTTP/S)":"Web-URL (HTTP/S)",host};
+}
 function collectHeardDiagnostics(){
   let stored=[],storageError="";
   try {
@@ -398,38 +415,58 @@ function collectHeardDiagnostics(){
     if(!Array.isArray(parsed))storageError="Gespeicherte Einträge haben ein unerwartetes Format.";
     else stored=parsed;
   }catch(error){storageError="Gespeicherte Einträge konnten nicht gelesen werden.";}
-  const links=stored.filter(s=>typeof s==="string"&&s.length>0);
-  const invalid=stored.length-links.length;
-  const unique=Array.from(new Set(links));
-  const urls=new Set(episodes.map(ep=>ep.audioUrl).filter(Boolean));
-  const ids=new Map();
+  const unique=Array.from(new Set(stored.filter(x=>typeof x==="string"&&x.length>0)));
+  const invalid=stored.length-unique.length-(stored.filter(x=>typeof x==="string"&&x.length>0).length-unique.length);
+  const currentUrls=new Set(episodes.map(ep=>ep.audioUrl).filter(Boolean));
+  const currentPaths=new Map(),currentIds=new Set(episodes.map(ep=>ep.id));
+  for(const ep of episodes){
+    if(!ep.audioUrl)continue;
+    const path=normalizedAudio(ep.audioUrl);
+    if(!path)continue;
+    if(currentPaths.has(path))currentPaths.set(path,null);
+    else currentPaths.set(path,ep);
+  }
+  const mediaIds=new Map();
   for(const ep of episodes){
     const id=wdrMediaId(ep.audioUrl);
-    if(id)ids.set(id,ids.has(id)?null:ep);
+    if(id)mediaIds.set(id,mediaIds.has(id)?null:ep);
   }
-  let exact=0,mediaId=0,unmatched=0,wdr=0;
-  const sources=new Map();
-  const unresolved=[];
-  for(const link of unique){
-    try {
-      const host=new URL(link).hostname.toLowerCase();
-      sources.set(host,(sources.get(host)||0)+1);
-      if(host.includes("wdr")||host.includes("wdrmaus"))wdr++;
-    }catch(_) {}
-    if(urls.has(link)){exact++;continue;}
-    const id=wdrMediaId(link);
-    if(id && ids.get(id)){mediaId++;continue;}
-    unmatched++;
-    if(unresolved.length<5){
-      try{
-        const u=new URL(link);
-        unresolved.push(u.hostname+" · "+(u.pathname.split("/").filter(Boolean).pop()||"unbekannter Dateiname").slice(0,80));
-      }catch(_){unresolved.push("Kein gültiger Audio-Link");}
+  const formats=new Map(),domains=new Map(),unmatchedDomains=new Map(),unmatchedFormats=new Map();
+  let exact=0,samePath=0,mediaId=0,episodeId=0,unmatched=0,wdr=0,httpUrls=0,nonUrls=0;
+  const unmatchedValueLengths={short:0,medium:0,long:0};
+  for(const value of unique){
+    const info=classifySavedEntry(value);
+    groupCount(formats,info.type);
+    if(info.host){
+      httpUrls++;
+      groupCount(domains,info.host);
+      if(info.host.includes("wdr"))wdr++;
+    } else nonUrls++;
+    let matched=false;
+    if(currentUrls.has(value)){exact++;matched=true;}
+    else if(currentIds.has(value)){episodeId++;matched=true;}
+    else{
+      const path=normalizedAudio(value);
+      if(path&&currentPaths.get(path)){samePath++;matched=true;}
+      else{
+        const id=wdrMediaId(value);
+        if(id&&mediaIds.get(id)){mediaId++;matched=true;}
+      }
+    }
+    if(!matched){
+      unmatched++;
+      groupCount(unmatchedFormats,info.type);
+      if(info.host)groupCount(unmatchedDomains,info.host);
+      if(value.length<40)unmatchedValueLengths.short++;
+      else if(value.length<150)unmatchedValueLengths.medium++;
+      else unmatchedValueLengths.long++;
     }
   }
-  return {total:stored.length,unique:unique.length,invalid,exact,mediaId,unmatched,wdr,
-    episodeCount:episodes.length,storageError,domains:Array.from(sources).sort((a,b)=>b[1]-a[1]).slice(0,5),
-    unresolved};
+  const sortCount=m=>Array.from(m).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  return {total:stored.length,unique:unique.length,invalid,exact,samePath,mediaId,episodeId,
+    unmatched,wdr,httpUrls,nonUrls,episodeCount:episodes.length,storageError,
+    formats:sortCount(formats),domains:sortCount(domains),unmatchedFormats:sortCount(unmatchedFormats),
+    unmatchedDomains:sortCount(unmatchedDomains),unmatchedValueLengths};
 }
 function addDiagnosticRow(parent,label,value){
   const row=document.createElement("div");
@@ -439,19 +476,27 @@ function addDiagnosticRow(parent,label,value){
   row.append(left,right);parent.append(row);
 }
 function diagnosticSummary(result){
+  const asList=(items)=>items.length?items.map(([name,count])=>name+": "+count).join("; "):"keine";
   return [
-    "Köttelmann v65 – Hörstatus-Diagnose",
-    "Archivfolgen: "+result.episodeCount,
-    "Gehört-Einträge gespeichert: "+result.total,
-    "Einmalige Audio-Links: "+result.unique,
-    "Direkt zugeordnet: "+result.exact,
-    "Über gleiche WDR-Medien-ID zuordenbar: "+result.mediaId,
-    "Nicht zugeordnet: "+result.unmatched,
+    "Köttelmann v66 – Hörstatus-Diagnose",
+    "Folgen im Archiv: "+result.episodeCount,
+    "Gespeicherte Gehört-Einträge: "+result.total,
+    "Verschiedene Text-Einträge: "+result.unique,
+    "Exakte Audio-URL-Treffer: "+result.exact,
+    "Identischer URL-Pfad: "+result.samePath,
+    "WDR-Medien-ID-Treffer: "+result.mediaId,
+    "Folgen-ID-Treffer: "+result.episodeId,
+    "Noch nicht zugeordnet: "+result.unmatched,
     "Ungültige Einträge: "+result.invalid,
-    "WDR-Links (Hostname): "+result.wdr,
-    "Häufigste Hosts: "+result.domains.map(([domain,count])=>domain+" ("+count+")").join(", "),
+    "Internet-URLs: "+result.httpUrls,
+    "Andere Kennungen: "+result.nonUrls,
+    "Formate insgesamt: "+asList(result.formats),
+    "Formate nicht zugeordnet: "+asList(result.unmatchedFormats),
+    "Hosts insgesamt: "+asList(result.domains),
+    "Hosts nicht zugeordnet: "+asList(result.unmatchedDomains),
+    "Längen nicht zugeordneter Werte (<40 / 40–149 / >=150 Zeichen): "+Object.values(result.unmatchedValueLengths).join(" / "),
     "WDR-Archivtest: "+wdrProbeMessage,
-    result.storageError?("Speicherfehler: "+result.storageError):""
+    result.storageError?"Speicherfehler: "+result.storageError:""
   ].filter(Boolean).join("\n");
 }
 async function probeWdrArchive(button){
@@ -482,12 +527,26 @@ function renderDiagnostics(){
   hint.textContent="Nur Anzeige: Es werden keine Hörmarkierungen oder Favoriten verändert.";
   panel.append(heading,hint);
   addDiagnosticRow(panel,"Gespeicherte „Gehört“-Einträge",result.total);
-  addDiagnosticRow(panel,"Einmalige Audio-Links",result.unique);
-  addDiagnosticRow(panel,"Direkt erkannten Folgen zugeordnet",result.exact);
-  addDiagnosticRow(panel,"Gleiche WDR-Medienkennung",result.mediaId);
+  addDiagnosticRow(panel,"Einmalige Werte",result.unique);
+  addDiagnosticRow(panel,"Exakte Audio-URL-Treffer",result.exact);
+  addDiagnosticRow(panel,"Gleicher Host und Dateipfad",result.samePath);
+  addDiagnosticRow(panel,"WDR-Medienkennungen",result.mediaId);
+  addDiagnosticRow(panel,"Folgenkennungen",result.episodeId);
   addDiagnosticRow(panel,"Noch nicht zugeordnet",result.unmatched);
   addDiagnosticRow(panel,"Folgen im lokalen Archiv",result.episodeCount);
-  if(result.invalid)addDiagnosticRow(panel,"Ungültige gespeicherte Einträge",result.invalid);
+  const addGroups=(title,pairs)=>{
+    const heading=document.createElement("h3");
+    heading.textContent=title;heading.className="text-amber-400 font-semibold text-sm pt-2";
+    panel.append(heading);
+    if(!pairs.length)addDiagnosticRow(panel,"Keine Einträge","0");
+    pairs.forEach(([name,count])=>addDiagnosticRow(panel,name,count));
+  };
+  addGroups("Formate der gespeicherten Einträge",result.formats);
+  addGroups("Formate der nicht zugeordneten Einträge",result.unmatchedFormats);
+  addGroups("Internet-Domains (alle)",result.domains);
+  addGroups("Internet-Domains (nicht zugeordnet)",result.unmatchedDomains);
+  addDiagnosticRow(panel,"Andere Kennungen ohne Internet-URL",result.nonUrls);
+  if(result.invalid)addDiagnosticRow(panel,"Ungültige Einträge",result.invalid);
   if(result.storageError){
     const error=document.createElement("p");error.textContent=result.storageError;error.className="text-rose-300 text-xs";panel.append(error);
   }
@@ -507,7 +566,7 @@ function renderDiagnostics(){
   },"py-3 px-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-bold");
   controls.append(probe,copy);panel.append(controls);
   const privacy=document.createElement("p");privacy.className="text-xs text-slate-500";
-  privacy.textContent="Beim Kopieren werden nur Zahlen und Domainnamen übernommen, keine vollständigen Audio-Links.";
+  privacy.textContent="Beim Kopieren werden nur Formatarten, Anzahlen und Domainnamen übernommen – keine vollständigen Links oder Kennungen.";
   panel.append(privacy);
 }
 function initDiagnostics(){
@@ -523,5 +582,5 @@ function start(){
   initDiagnostics();
   refresh();
 }
-window.KoettelmannV65={start,page,syncMini};
+window.KoettelmannV66={start,page,syncMini};
 })();
