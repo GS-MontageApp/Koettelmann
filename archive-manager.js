@@ -1,4 +1,4 @@
-/* Autohaus Köttelmann v59 – Episodenarchiv und Player */
+/* Autohaus Köttelmann v60 – Episodenarchiv und Player */
 (() => {
 "use strict";
 const STORAGE = "koettelmann_ard_archive_v1";
@@ -95,23 +95,32 @@ function setFlag(key, ep, flag) {
   localStorage.setItem(key,JSON.stringify([...keys]));
 }
 function note(msg, error=false) {
+  if (!error) return; // Aktualisierungsinformationen bleiben unsichtbar.
+  console.warn("Köttelmann:", msg);
   const status = $("episode-message");
-  if(status) { status.textContent=msg; status.className="text-xs px-1 "+(error?"text-rose-300":"text-slate-400"); }
+  if (status && !episodes.length) {
+    status.textContent = msg;
+    status.className = "text-sm text-rose-300 text-center py-4";
+  }
 }
 function resetCardState() {
   document.querySelectorAll(".archive-episode").forEach(card => {
     const ep=byId.get(card.dataset.episode);
-    if(!ep) return;
+    if (!ep) return;
     const heard=includes(COMPLETED,ep), favorite=includes(FAVORITES,ep);
     card.classList.toggle("border-emerald-500",heard);
     card.classList.toggle("border-amber-500",!heard);
     const heardBtn=card.querySelector(".heard-btn");
-    if(heardBtn) {
+    if (heardBtn) {
       heardBtn.textContent=heard?"✓ Gehört":"○ Ungehört";
-      heardBtn.className="heard-btn px-3 py-2 text-xs rounded-lg border "+(heard?"bg-emerald-950 text-emerald-300 border-emerald-600":"bg-slate-700 text-slate-200 border-slate-600");
+      heardBtn.className="heard-btn text-[10px] font-medium px-2 py-1 rounded-full border transition active:scale-95 "+
+        (heard?"bg-emerald-950 text-emerald-400 border-emerald-800":"bg-slate-700 text-slate-300 border-slate-600");
     }
     const fav=card.querySelector(".fav-btn");
-    if(fav) fav.textContent=favorite?"★ Favorit":"☆ Favorit";
+    if (fav) {
+      fav.textContent=favorite?"★":"☆";
+      fav.className="fav-btn p-1 text-xl leading-none transition active:scale-95 "+(favorite?"text-amber-400":"text-slate-400");
+    }
   });
 }
 function updateNowPlaying() {
@@ -124,6 +133,13 @@ function updateNowPlaying() {
   pos.textContent=time(elapsed)+" / "+time(duration);
   seek.value=duration ? Math.min(100,elapsed/duration*100) : 0;
   seek.disabled=!duration;
+  document.querySelectorAll(".episode-progress").forEach(seekEl => {
+    if (!activeEpisode || seekEl.dataset.id !== activeEpisode.id) return;
+    seekEl.value=duration ? Math.min(100,elapsed/duration*100) : 0;
+  });
+  document.querySelectorAll(".episode-current-time").forEach(t => {
+    if (activeEpisode && t.dataset.id===activeEpisode.id) t.textContent=time(elapsed);
+  });
   document.querySelectorAll(".play-episode").forEach(b => {
     b.textContent=activeEpisode && b.dataset.id===activeEpisode.id && player && !player.paused ? "Pause" : "Start / Weiter";
   });
@@ -168,7 +184,7 @@ function skip(seconds) {
 }
 function createMini() {
   if(playerBar) return;
-  const bar=element("section",null,"hidden fixed bottom-[70px] left-1/2 -translate-x-1/2 w-full max-w-md z-40 bg-slate-950 border border-amber-500 rounded-t-xl p-3 shadow-2xl space-y-2");
+  const bar=element("section",null,"hidden fixed bottom-[70px] left-1/2 -translate-x-1/2 w-full max-w-md z-40 bg-slate-800 border border-amber-500 rounded-2xl p-3 shadow-2xl space-y-2");
   bar.setAttribute("aria-label","Laufende Wiedergabe");
   const top=element("div",null,"flex gap-2 items-center");
   const title=element("span","Keine Folge ausgewählt","flex-1 min-w-0 truncate font-semibold text-amber-400 text-sm");
@@ -210,66 +226,107 @@ function openCard(ep) {
     const details=card.querySelector(".episode-body");
     if(details) details.classList.toggle("hidden",!visible);
     card.setAttribute("aria-expanded",String(visible));
+    const title=card.querySelector("button[aria-expanded]");
+    if(title)title.setAttribute("aria-expanded",String(visible));
+    const mark=card.querySelector(".watermark");
+    if(mark){mark.classList.toggle("opacity-20",visible);mark.classList.toggle("opacity-0",!visible);}
   });
   // Absichtlich keine Audio-Pause beim Schließen.
 }
 function renderCard(ep) {
-  const card=element("article",null,"archive-episode bg-slate-800 border-2 rounded-2xl p-4 shadow-sm space-y-3");
+  const card=element("article",null,"archive-episode bg-slate-800 border-2 rounded-2xl p-5 shadow-sm transition hover:opacity-95 relative overflow-hidden space-y-3");
   card.dataset.episode=ep.id;
-  const head=button(ep.title,()=>openCard(ep),"w-full text-left text-amber-400 font-semibold leading-snug py-1");
-  head.setAttribute("aria-label",ep.title+" – Details auf- oder zuklappen");
-  card.append(head);
-  const actionRow=element("div",null,"flex flex-wrap items-center gap-2");
+  card.setAttribute("aria-expanded", String(openEpisode===ep.id));
+  const watermark=element("div",null,"watermark absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 transition-opacity duration-300 "+(openEpisode===ep.id?"opacity-20":"opacity-0"));
+  const img=element("img");img.src="img/splash.jpg";img.alt="";img.className="w-full h-full object-cover";
+  watermark.append(img);card.append(watermark);
+  const content=element("div",null,"relative z-10 space-y-3");
+  const head=element("div",null,"flex justify-between items-center gap-2");
+  const title=button(ep.title,()=>openCard(ep),"flex-1 min-w-0 text-left text-amber-400 font-semibold text-base leading-snug py-1");
+  title.setAttribute("aria-label",ep.title+" – Details auf- oder zuklappen");
+  title.setAttribute("aria-expanded",String(openEpisode===ep.id));
+  head.append(title);
+  const actions=element("div",null,"flex items-center gap-1 flex-shrink-0");
   const heard=button("",()=>{
     if(includes(COMPLETED,ep) && !confirm("Möchtest du diese Folge wirklich wieder auf „Ungehört“ setzen?")) return;
     setFlag(COMPLETED,ep,!includes(COMPLETED,ep));
     resetCardState();
-  });heard.className+=" heard-btn";
+  });
+  heard.className="heard-btn";
   const fav=button("",()=>{
     setFlag(FAVORITES,ep,!includes(FAVORITES,ep));resetCardState();
-  },"fav-btn text-xs px-3 py-2 rounded-lg bg-slate-700 border border-slate-600");
-  const shareBtn=button("Teilen",()=>share(ep),"px-3 py-2 text-xs rounded-lg bg-slate-700 border border-slate-600");
+  });
+  fav.className="fav-btn";
+  const shareBtn=button("Teilen",()=>share(ep),"px-2 py-1 text-[11px] rounded-lg bg-slate-700 border border-slate-600 text-slate-200");
   shareBtn.setAttribute("aria-label","Folge teilen: "+ep.title);
-  actionRow.append(heard,fav,shareBtn);card.append(actionRow);
-  const body=element("div",null,"episode-body pt-2 border-t border-slate-600 space-y-3");
+  actions.append(heard,fav,shareBtn);head.append(actions);content.append(head);
+  const body=element("div",null,"episode-body pt-3 border-t border-slate-700/60 space-y-3 text-sm text-slate-300");
   body.classList.toggle("hidden",openEpisode!==ep.id);
-  body.append(element("p","Veröffentlichung: "+date(ep.publishDate),"text-xs text-slate-300"));
-  if(ep.duration!==null) body.append(element("p","Laufzeit: "+time(ep.duration>10000?ep.duration/1000:ep.duration),"text-xs text-slate-300"));
-  const controls=element("div",null,"flex gap-2 items-center");
-  controls.append(button("−5s",()=>skip(-5),"px-4 py-3 bg-slate-700 border border-amber-500 rounded-xl"));
-  const play=button("Start / Weiter",()=>playEpisode(ep),"play-episode flex-1 py-3 bg-amber-500 text-slate-950 font-bold rounded-xl");
-  play.dataset.id=ep.id;
-  controls.append(play,button("+5s",()=>skip(5),"px-4 py-3 bg-slate-700 border border-amber-500 rounded-xl"));
-  body.append(controls);
-  if(!ep.audioUrl) body.append(element("p","Kein direkt abspielbarer Audiolink vorhanden.","text-xs text-amber-300"));
+  function info(label,value,color="text-slate-200") {
+    const row=element("div",null,"flex justify-between items-center gap-2");
+    row.append(element("span",label,"text-slate-400"),element("span",value,"font-medium "+color));
+    return row;
+  }
+  body.append(info("Veröffentlichung:",date(ep.publishDate)));
+  if (ep.duration!==null) body.append(info("Laufzeit:",time(ep.duration>10000?ep.duration/1000:ep.duration)));
+  if (ep.availableTo) body.append(info("Verfügbarkeit:",date(ep.availableTo),"text-emerald-400"));
+  if (ep.audioUrl) {
+    const audioArea=element("div",null,"pt-2 space-y-2");
+    const seek=element("input");
+    seek.type="range";seek.min="0";seek.max="100";seek.value="0";
+    seek.dataset.id=ep.id;seek.className="episode-progress w-full";
+    seek.setAttribute("aria-label","Wiedergabeposition von "+ep.title);
+    seek.addEventListener("input",()=>{
+      if (activeEpisode?.id===ep.id && player && Number.isFinite(player.duration)) player.currentTime=player.duration*Number(seek.value)/100;
+    });
+    audioArea.append(seek);
+    const timing=element("div",null,"flex justify-between text-[11px] text-slate-400 font-mono");
+    const current=element("span","00:00");current.dataset.id=ep.id;current.className="episode-current-time";
+    timing.append(current,element("span",ep.duration!==null?time(ep.duration>10000?ep.duration/1000:ep.duration):"00:00"));
+    audioArea.append(timing);
+    const controls=element("div",null,"grid grid-cols-3 gap-2");
+    controls.append(button("−5s",()=>skip(-5),"py-2.5 px-2 text-xs font-semibold bg-slate-700 text-slate-200 border border-amber-500 rounded-xl"));
+    const play=button("Start / Weiter",()=>playEpisode(ep),"play-episode py-2.5 px-2 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl");
+    play.dataset.id=ep.id;
+    controls.append(play,button("+5s",()=>skip(5),"py-2.5 px-2 text-xs font-semibold bg-slate-700 text-slate-200 border border-amber-500 rounded-xl"));
+    audioArea.append(controls);body.append(audioArea);
+  } else body.append(element("p","Kein direkt abspielbarer Audiolink vorhanden.","text-xs text-amber-300"));
   if(ep.pageUrl) {
     const a=element("a","Folgenseite öffnen","inline-block text-xs underline text-amber-400");
-    a.href=ep.pageUrl; a.rel="noopener noreferrer"; a.target="_blank";body.append(a);
+    a.href=ep.pageUrl;a.rel="noopener noreferrer";a.target="_blank";body.append(a);
   }
-  card.append(body);
+  content.append(body);card.append(content);
   return card;
 }
 function renderPager(total) {
   const nav=$("pagination-container"); if(!nav)return;
   nav.replaceChildren();
   if(total<=1) return;
-  const first=button("‹",()=>render(currentPage-1),"px-3 py-3 bg-slate-700 border border-amber-500 rounded-xl");
+  const pagerClass="py-3 bg-slate-700 text-slate-100 border border-amber-500 rounded-xl font-bold min-h-[44px]";
+  const first=button("‹",()=>render(currentPage-1),"px-4 "+pagerClass);
   first.disabled=currentPage<=1;
+  if(first.disabled) first.className="px-4 py-3 bg-slate-800 text-slate-600 border border-slate-700 rounded-xl";
+  first.setAttribute("aria-label","Vorherige Seite");
   nav.append(first);
-  const numbers=element("div",null,"flex flex-wrap gap-1 justify-center flex-1");
-  const maxVisible=7;
-  let start=Math.max(1,currentPage-Math.floor(maxVisible/2));
+  const numbers=element("div",null,"flex gap-1.5 justify-center flex-grow min-w-0");
+  // Kleine Fenster-Navigation, bei vielen Seiten stets die passende Auswahl.
+  const maxVisible=4;
+  let start=Math.max(1,currentPage-1);
   let end=Math.min(total,start+maxVisible-1);
   start=Math.max(1,end-maxVisible+1);
   for(let page=start;page<=end;page++) {
-    const b=button(String(page),()=>render(page),"min-w-9 py-3 px-2 text-sm rounded-lg border border-amber-500 "+(page===currentPage?"bg-amber-500 text-slate-950 font-bold":"bg-slate-700 text-white"));
+    const b=button(String(page),()=>render(page),
+      "min-w-[36px] px-2 py-3 text-sm rounded-xl border border-amber-500 font-bold "+
+      (page===currentPage?"bg-amber-500 text-slate-950":"bg-slate-700 text-slate-100"));
     b.setAttribute("aria-label","Seite "+page+" von "+total);
-    if(page===currentPage) b.setAttribute("aria-current","page");
+    if(page===currentPage)b.setAttribute("aria-current","page");
     numbers.append(b);
   }
   nav.append(numbers);
-  const next=button("›",()=>render(currentPage+1),"px-3 py-3 bg-slate-700 border border-amber-500 rounded-xl");
+  const next=button("›",()=>render(currentPage+1),"px-4 "+pagerClass);
   next.disabled=currentPage>=total;
+  if(next.disabled)next.className="px-4 py-3 bg-slate-800 text-slate-600 border border-slate-700 rounded-xl";
+  next.setAttribute("aria-label","Nächste Seite");
   nav.append(next);
 }
 function render(page=1, scroll=true) {
@@ -278,13 +335,10 @@ function render(page=1, scroll=true) {
   const total=Math.max(1,Math.ceil(episodes.length/PAGE_SIZE));
   currentPage=Math.max(1,Math.min(total,page));
   container.replaceChildren();
-  const count=element("p",episodes.length+" Folgen · 100 pro Seite","text-xs text-slate-300");
-  container.append(count);
-  const message=element("p","","text-xs px-1 text-slate-400");
-  message.id="episode-message";
-  container.append(message);
   if(!episodes.length) {
-    container.append(element("p","Das Archiv wird geladen. Bitte Internetverbindung prüfen.","text-sm text-amber-400 py-10 text-center"));
+    const message=element("p","Lade Folgenarchiv …","text-sm text-amber-400 py-10 text-center");
+    message.id="episode-message";
+    container.append(message);
   } else {
     const pageItems=episodes.slice((currentPage-1)*PAGE_SIZE,currentPage*PAGE_SIZE);
     if(openEpisode && !pageItems.some(e=>e.id===openEpisode)) openEpisode=null;
@@ -312,6 +366,7 @@ async function refresh() {
   if(loading) return;
   loading=true;let cursor=null, fetched=0;
   const seen=new Set(); let completed=false;
+  const oldArchive=JSON.stringify(episodes);
   try {
     for(let page=0;page<100;page++){
       if(!episodes.length) note("Lade ARD-Sounds-Archiv …");
@@ -328,15 +383,15 @@ async function refresh() {
       if(!next || seen.has(next)) throw new Error("ARD-Seitenzählung unvollständig");
       seen.add(next);cursor=next;
     }
-    render(currentPage,false);
-    if(!focusRequested()) note(completed?"Archiv aktualisiert: "+episodes.length+" Folgen.":"Archiv teilweise aktualisiert.");
+    if (JSON.stringify(episodes)!==oldArchive) render(currentPage,false);
+    focusRequested();
   } catch(e) {
     console.warn("ARD-Archivaktualisierung:",e);
     if(!episodes.length) {
       note("ARD Sounds ist gerade nicht erreichbar. Bitte später erneut öffnen. "+e.message,true);
-      if(typeof window.fetchAndParseLiveWDR==="function") window.fetchAndParseLiveWDR();
+      // Offline bleibt die Oberfläche sichtbar; keine alte WDR-Archivliste als Ersatz laden.
     } else {
-      note("Gespeichertes Archiv verfügbar; Online-Aktualisierung derzeit nicht möglich.",true);
+      console.warn("ARD Sounds derzeit nicht erreichbar; lokales Archiv bleibt erhalten.");
     }
     focusRequested();
   } finally { loading=false; }
