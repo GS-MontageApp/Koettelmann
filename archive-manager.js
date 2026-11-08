@@ -1,4 +1,4 @@
-/* Köttelmann: verstecktes Archiv-/Import-/Exportmenü */
+/* Köttelmann: Archiv-/Import-/Exportmenü mit sichtbarem Button */
 (function () {
   "use strict";
   const KEY = "koettelmann_ard_archive_v1";
@@ -243,6 +243,8 @@
 
   function init() {
     load();
+    const openButton = document.getElementById("open-archive-manager");
+    if (openButton) openButton.addEventListener("click", openMenu);
     const image = document.querySelector("header img");
     if (!image) return;
     image.style.cursor = "pointer";
