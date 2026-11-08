@@ -1,4 +1,4 @@
-/* Köttelmann v66: Originalkarten aus v56 + ARD-Sounds-Archiv */
+/* Köttelmann v67: Originalkarten aus v56 + ARD-Sounds-Archiv */
 (function(){
 "use strict";
 const ARCHIVE_KEY="koettelmann_ard_archive_v1";
@@ -189,6 +189,7 @@ async function refresh(){
     if(JSON.stringify(episodes)!==oldSnapshot)render(currentPage,false);
     showShared();
     if(diagnosticOpen)renderDiagnostics();
+    restoreOldHeard();
   }catch(e){
     console.warn("Aktualisierung nicht verfügbar; lokaler Stand bleibt bestehen:",e);
     if(!episodes.length){
@@ -248,7 +249,7 @@ function syncMini(){
   document.getElementById("mini-duration").textContent=time(duration);
 }
 
-/* v66: Altes WDR-Hörprotokoll zu den ARD-Folgen zuordnen.
+/* v67: Altes WDR-Hörprotokoll zu den ARD-Folgen zuordnen.
    Die Original-URLs bleiben ausnahmslos erhalten. Kein unsicherer Titel-Raten-Abgleich. */
 const WDR_ARCHIVE_URL="https://www1.wdr.de/mediathek/audio/wdr4/autohaus-koettelmann/index.html";
 const WDR_PROXY="https://koettelmann-proxy.m3-jost.workers.dev/?url=";
@@ -319,55 +320,133 @@ function matchOldAudioByFileId(legacy){
   }
   return matched;
 }
-function extractWdrEpisodes(doc,legacySet) {
-  const byExact=new Map();
-  const items=[];
-  const wdrRoot=new URL(WDR_ARCHIVE_URL);
+/* v67: Identische relative MP3-Pfade erkennen, selbst wenn der WDR sie
+   ohne Hostname abgelegt hat. Niemals nur anhand eines Dateinamens raten. */
+function cleanAudioPath(raw,base=WDR_ARCHIVE_URL){
+  if(typeof raw!=="string"||!raw.trim())return "";
+  try{
+    const url=new URL(raw.trim(),base);
+    if(!/^https?:$/.test(url.protocol))return "";
+    // Ein Hostname ist für ältere relative MP3-Pfade nicht vorhanden.
+    return decodeURI(url.pathname).replace(/\/+/g,"/").toLowerCase();
+  }catch(_){return "";}
+}
+function oldPathVariants(value){
+  if(typeof value!=="string"||!value.trim())return [];
+  const raw=value.trim();
+  const paths=new Set();
+  const full=cleanAudioPath(raw);
+  if(full)paths.add(full);
+  // Bei WDR-Downloadlinks kann eine alte relative Angabe mit "./" beginnen.
+  // Die ursprüngliche Angabe darf unverändert als Pfad verglichen werden.
+  const direct=raw.split(/[?#]/)[0].replace(/^\.\//,"");
+  if(direct && !/^[a-z][a-z0-9+.-]*:/i.test(direct)){
+    paths.add(("/"+direct.replace(/^\/+/,"")).replace(/\/+/g,"/").toLowerCase());
+  }
+  return Array.from(paths);
+}
+function makeLegacyPathIndex(oldLinks){
+  const byPath=new Map();
+  for(const value of oldLinks){
+    for(const path of oldPathVariants(value)){
+      const earlier=byPath.get(path);
+      if(earlier && earlier!==value)byPath.set(path,null);
+      else if(!byPath.has(path))byPath.set(path,value);
+    }
+  }
+  return byPath;
+}
+function titleDateKey(title,date){
+  if(!date)return "";
+  const normalized=normalizeName(title);
+  return normalized?normalized+"|"+date:"";
+}
+function extractMatchingWdrRows(doc,baseUrl,legacyPaths){
+  const candidates=[];
+  const wdrRoot=new URL(baseUrl);
   doc.querySelectorAll(".box").forEach(box=>{
     const title=box.querySelector("h3 a")?.textContent?.trim();
-    const date=germanDate(box.querySelector(".mediaDate")?.textContent);
-    const audioLink=box.querySelector("a.button.download")||box.querySelector('a[href*=".mp3"]');
-    const href=audioLink?.getAttribute("href");
-    if(!title||!date||!href)return;
-    let url;
-    try {url=new URL(href,wdrRoot).href;}catch(_){return;}
-    if(!legacySet.has(url) && !legacySet.has(normalizedAudio(url)))return;
-    items.push({url,title,date});
+    const day=germanDate(box.querySelector(".mediaDate")?.textContent||"");
+    const link=box.querySelector("a.button.download")||box.querySelector('a[href*=".mp3"]');
+    const raw=link?.getAttribute("href");
+    if(!title||!day||!raw)return;
+    const absolute=cleanAudioPath(raw,wdrRoot.href);
+    const possibilities=new Set(oldPathVariants(raw));
+    if(absolute)possibilities.add(absolute);
+    const matching=new Set();
+    for(const path of possibilities){
+      const legacy=legacyPaths.get(path);
+      if(legacy)matching.add(legacy);
+    }
+    if(matching.size!==1)return;
+    const legacy=[...matching][0];
+    candidates.push({legacy,title,day});
   });
-  return items;
+  return candidates;
 }
-async function recoverFromWdrPages(oldLinks) {
+function recoverDateCandidates(rows){
+  // Eindeutige Zuordnung in BEIDEN Archiven erforderlich.
+  const byTitleDate=buildUniqueIndex(ep=>titleDateKey(ep.title,episodeDate(ep.publishDate)));
+  const assigned=new Map();
+  const ambiguous=new Set();
+  for(const item of rows){
+    const key=titleDateKey(item.title,item.day);
+    const episode=key?byTitleDate.get(key):null;
+    if(!episode?.audioUrl)continue;
+    const old=assigned.get(item.legacy);
+    if(old && old.id!==episode.id)ambiguous.add(item.legacy);
+    else assigned.set(item.legacy,episode);
+  }
+  ambiguous.forEach(key=>assigned.delete(key));
+  return [...assigned.values()];
+}
+let recoveryProgress={status:"Noch nicht gestartet",scanned:0,pathMatches:0,restored:0};
+async function recoverFromWdrPages(oldLinks){
   if(wdrCheckedThisStart)return;
   wdrCheckedThisStart=true;
   if(!oldLinks.length)return;
-  const byTitleDate=buildUniqueIndex(ep=>normalizeName(ep.title)+"|"+episodeDate(ep.publishDate));
-  const legacySet=new Set([...oldLinks,...oldLinks.map(normalizedAudio)]);
-  const pages=[WDR_ARCHIVE_URL],visited=new Set(),found=[];
-  for(let n=0;pages.length && n<25;n++){
-    const url=pages.shift();
-    if(visited.has(url))continue;
-    visited.add(url);
-    try{
+  const byPath=makeLegacyPathIndex(oldLinks);
+  if(!byPath.size)return;
+  const pages=[WDR_ARCHIVE_URL],visited=new Set(),rows=[],seenMatches=new Set();
+  recoveryProgress={status:"WDR-Archiv wird abgeglichen",scanned:0,pathMatches:0,restored:0};
+  if(diagnosticOpen)renderDiagnostics();
+  try{
+    // Mit der WDR-Navigation durch alle erreichbaren Archivseiten gehen.
+    for(let n=0;pages.length && n<40;n++){
+      const url=pages.shift();
+      if(visited.has(url))continue;
+      visited.add(url);
       const response=await fetch(WDR_PROXY+encodeURIComponent(url),{cache:"no-store"});
-      if(!response.ok)break;
+      if(!response.ok)throw new Error("WDR-Archiv HTTP "+response.status);
       const doc=new DOMParser().parseFromString(await response.text(),"text/html");
-      for(const entry of extractWdrEpisodes(doc,legacySet)){
-        const ep=byTitleDate.get(normalizeName(entry.title)+"|"+entry.date);
-        if(ep)found.push(ep);
+      recoveryProgress.scanned++;
+      for(const entry of extractMatchingWdrRows(doc,url,byPath)){
+        const identity=entry.legacy+"|"+entry.title+"|"+entry.day;
+        if(seenMatches.has(identity))continue;
+        seenMatches.add(identity);rows.push(entry);
       }
-      // Nur die vom WDR selbst angegebenen Audio-Archivseiten verfolgen.
       doc.querySelectorAll('a[href*="_pageaudio-"]').forEach(link=>{
         try{
           const next=new URL(link.getAttribute("href"),url);
           if(next.origin===new URL(WDR_ARCHIVE_URL).origin &&
-             next.pathname.includes("/autohaus-koettelmann/") &&
-             next.pathname.includes("_pageaudio-") &&
-             !visited.has(next.href) && !pages.includes(next.href))pages.push(next.href);
+            next.pathname.includes("/autohaus-koettelmann/") &&
+            next.pathname.includes("_pageaudio-") &&
+            !visited.has(next.href) && !pages.includes(next.href))pages.push(next.href);
         }catch(_){}
       });
-    } catch(e){console.warn("WDR-Altarchiv derzeit nicht erreichbar",e);break;}
-    if(found.length)applyRecoveredHeard(found.splice(0));
+    }
+    recoveryProgress.pathMatches=new Set(rows.map(row=>row.legacy)).size;
+    const candidates=recoverDateCandidates(rows);
+    recoveryProgress.restored=applyRecoveredHeard(candidates);
+    recoveryProgress.status="Abgleich abgeschlossen";
+  }catch(error){
+    recoveryProgress.pathMatches=new Set(rows.map(row=>row.legacy)).size;
+    // Teilweise verifizierte Treffer dürfen dennoch wiederhergestellt werden.
+    recoveryProgress.restored=applyRecoveredHeard(recoverDateCandidates(rows));
+    recoveryProgress.status="WDR-Abgleich teilweise möglich: "+String(error?.message||"Netzwerkfehler").slice(0,80);
+    console.warn(recoveryProgress.status);
   }
+  if(diagnosticOpen)renderDiagnostics();
 }
 async function restoreOldHeard(){
   if(recoveryRunning||!episodes.length)return;
@@ -376,18 +455,15 @@ async function restoreOldHeard(){
     const saved=getCompletedEpisodes();
     if(!Array.isArray(saved)||!saved.length)return;
     const current=new Set(episodes.map(ep=>ep.audioUrl).filter(Boolean));
-    const old=saved.filter(url=>typeof url==="string"&&url && !current.has(url));
+    const old=saved.filter(value=>typeof value==="string"&&value&&!current.has(value));
     if(!old.length)return;
     applyRecoveredHeard(matchOldAudioByFileId(old));
-    // WDR-Verzeichnisse können alte Audio-Dateien mit Titel/Datum verknüpfen.
-    // Bei fehlender Zuordnung wird keine Folge vorsorglich als gehört markiert.
     await recoverFromWdrPages(old);
-  }catch(e){console.warn("Alte Hörmarkierungen konnten nicht vollständig abgeglichen werden",e);}
+  }catch(error){console.warn("Alte Hörmarkierungen konnten nicht abgeglichen werden",error);}
   finally{recoveryRunning=false;}
 }
 
-
-/* v66: Diagnostik ist rein lesend. Keine gespeicherte Markierung wird migriert. */
+/* v67: Diagnostik ist rein lesend. Keine gespeicherte Markierung wird migriert. */
 let diagnosticOpen=false;
 let wdrProbeMessage="Noch nicht geprüft.";
 function groupCount(map,key){map.set(key,(map.get(key)||0)+1);}
@@ -478,7 +554,7 @@ function addDiagnosticRow(parent,label,value){
 function diagnosticSummary(result){
   const asList=(items)=>items.length?items.map(([name,count])=>name+": "+count).join("; "):"keine";
   return [
-    "Köttelmann v66 – Hörstatus-Diagnose",
+    "Köttelmann v67 – Hörstatus-Diagnose",
     "Folgen im Archiv: "+result.episodeCount,
     "Gespeicherte Gehört-Einträge: "+result.total,
     "Verschiedene Text-Einträge: "+result.unique,
@@ -495,6 +571,10 @@ function diagnosticSummary(result){
     "Hosts insgesamt: "+asList(result.domains),
     "Hosts nicht zugeordnet: "+asList(result.unmatchedDomains),
     "Längen nicht zugeordneter Werte (<40 / 40–149 / >=150 Zeichen): "+Object.values(result.unmatchedValueLengths).join(" / "),
+    "Altabgleich: "+recoveryProgress.status,
+    "WDR-Seiten geprüft: "+recoveryProgress.scanned,
+    "Originalpfade im WDR gefunden: "+recoveryProgress.pathMatches,
+    "Zusätzlich wiederhergestellt: "+recoveryProgress.restored,
     "WDR-Archivtest: "+wdrProbeMessage,
     result.storageError?"Speicherfehler: "+result.storageError:""
   ].filter(Boolean).join("\n");
@@ -524,7 +604,7 @@ function renderDiagnostics(){
   const result=collectHeardDiagnostics();
   const heading=document.createElement("h2");heading.textContent="Hörstatus-Diagnose";heading.className="font-bold text-amber-400 text-base";
   const hint=document.createElement("p");hint.className="text-xs text-slate-400";
-  hint.textContent="Nur Anzeige: Es werden keine Hörmarkierungen oder Favoriten verändert.";
+  hint.textContent="Diagnose zeigt den Abgleich. Alte Einträge bleiben erhalten; eindeutig erkannte Folgen werden als gehört ergänzt.";
   panel.append(heading,hint);
   addDiagnosticRow(panel,"Gespeicherte „Gehört“-Einträge",result.total);
   addDiagnosticRow(panel,"Einmalige Werte",result.unique);
@@ -550,6 +630,10 @@ function renderDiagnostics(){
   if(result.storageError){
     const error=document.createElement("p");error.textContent=result.storageError;error.className="text-rose-300 text-xs";panel.append(error);
   }
+  addDiagnosticRow(panel,"Altabgleich",recoveryProgress.status);
+  addDiagnosticRow(panel,"WDR-Seiten geprüft",recoveryProgress.scanned);
+  addDiagnosticRow(panel,"Originalpfade im WDR gefunden",recoveryProgress.pathMatches);
+  addDiagnosticRow(panel,"In diesem Abgleich wiederhergestellt",recoveryProgress.restored);
   const wdr=document.createElement("p");wdr.className="text-xs text-slate-300";
   wdr.textContent="WDR-Test: "+wdrProbeMessage;panel.append(wdr);
   const controls=document.createElement("div");controls.className="grid grid-cols-2 gap-2 pt-2";
@@ -580,7 +664,8 @@ function start(){
   createMini();
   if(!showShared())render(1,false);
   initDiagnostics();
+  restoreOldHeard();
   refresh();
 }
-window.KoettelmannV66={start,page,syncMini};
+window.KoettelmannV67={start,page,syncMini};
 })();
