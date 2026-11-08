@@ -1,5 +1,5 @@
-// === KÖTTELMANN APP - Service Worker v57 ===
-const CACHE_NAME = 'koettelmann-v57-archive-headerfix';
+// === KÖTTELMANN APP - Service Worker v58 ===
+const CACHE_NAME = 'koettelmann-v58-archive-button';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
