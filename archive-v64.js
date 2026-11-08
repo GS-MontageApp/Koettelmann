@@ -270,7 +270,8 @@ function wdrMediaId(url) {
 }
 function normalizeName(value){
   return String(value||"").normalize("NFKD").toLowerCase()
-    .replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+    .replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim()
+    .replace(/^autohaus kottelmann /,"");
 }
 function germanDate(value){
   const match=String(value||"").match(/(\d{2})\.(\d{2})\.(\d{4})/);
