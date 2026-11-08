@@ -1,4 +1,4 @@
-/* Köttelmann v67: Originalkarten aus v56 + ARD-Sounds-Archiv */
+/* Köttelmann v68: Originalkarten aus v56 + ARD-Sounds-Archiv */
 (function(){
 "use strict";
 const ARCHIVE_KEY="koettelmann_ard_archive_v1";
@@ -249,7 +249,7 @@ function syncMini(){
   document.getElementById("mini-duration").textContent=time(duration);
 }
 
-/* v67: Altes WDR-Hörprotokoll zu den ARD-Folgen zuordnen.
+/* v68: Altes WDR-Hörprotokoll zu den ARD-Folgen zuordnen.
    Die Original-URLs bleiben ausnahmslos erhalten. Kein unsicherer Titel-Raten-Abgleich. */
 const WDR_ARCHIVE_URL="https://www1.wdr.de/mediathek/audio/wdr4/autohaus-koettelmann/index.html";
 const WDR_PROXY="https://koettelmann-proxy.m3-jost.workers.dev/?url=";
@@ -320,7 +320,7 @@ function matchOldAudioByFileId(legacy){
   }
   return matched;
 }
-/* v67: Identische relative MP3-Pfade erkennen, selbst wenn der WDR sie
+/* v68: Identische relative MP3-Pfade erkennen, selbst wenn der WDR sie
    ohne Hostname abgelegt hat. Niemals nur anhand eines Dateinamens raten. */
 function cleanAudioPath(raw,base=WDR_ARCHIVE_URL){
   if(typeof raw!=="string"||!raw.trim())return "";
@@ -463,7 +463,7 @@ async function restoreOldHeard(){
   finally{recoveryRunning=false;}
 }
 
-/* v67: Diagnostik ist rein lesend. Keine gespeicherte Markierung wird migriert. */
+/* v68: Diagnostik ist rein lesend. Keine gespeicherte Markierung wird migriert. */
 let diagnosticOpen=false;
 let wdrProbeMessage="Noch nicht geprüft.";
 function groupCount(map,key){map.set(key,(map.get(key)||0)+1);}
@@ -554,7 +554,7 @@ function addDiagnosticRow(parent,label,value){
 function diagnosticSummary(result){
   const asList=(items)=>items.length?items.map(([name,count])=>name+": "+count).join("; "):"keine";
   return [
-    "Köttelmann v67 – Hörstatus-Diagnose",
+    "Köttelmann v68 – Hörstatus-Diagnose",
     "Folgen im Archiv: "+result.episodeCount,
     "Gespeicherte Gehört-Einträge: "+result.total,
     "Verschiedene Text-Einträge: "+result.unique,
@@ -663,9 +663,9 @@ function start(){
   loadSaved();
   createMini();
   if(!showShared())render(1,false);
-  initDiagnostics();
+  // Diagnoseoberfläche ausgeblendet; Altabgleich bleibt im Hintergrund aktiv.
   restoreOldHeard();
   refresh();
 }
-window.KoettelmannV67={start,page,syncMini};
+window.KoettelmannV68={start,page,syncMini};
 })();
