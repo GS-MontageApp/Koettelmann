@@ -1,4 +1,4 @@
-/* Köttelmann v63: Originalkarten aus v56 + ARD-Sounds-Archiv */
+/* Köttelmann v64: Originalkarten aus v56 + ARD-Sounds-Archiv */
 (function(){
 "use strict";
 const ARCHIVE_KEY="koettelmann_ard_archive_v1";
@@ -188,6 +188,7 @@ async function refresh(){
     }
     if(JSON.stringify(episodes)!==oldSnapshot)render(currentPage,false);
     showShared();
+    restoreOldHeard();
   }catch(e){
     console.warn("Aktualisierung nicht verfügbar; lokaler Stand bleibt bestehen:",e);
     if(!episodes.length){
@@ -246,11 +247,151 @@ function syncMini(){
   document.getElementById("mini-current").textContent=time(activeAudio.currentTime);
   document.getElementById("mini-duration").textContent=time(duration);
 }
+
+/* v64: Altes WDR-Hörprotokoll zu den ARD-Folgen zuordnen.
+   Die Original-URLs bleiben ausnahmslos erhalten. Kein unsicherer Titel-Raten-Abgleich. */
+const WDR_ARCHIVE_URL="https://www1.wdr.de/mediathek/audio/wdr4/autohaus-koettelmann/index.html";
+const WDR_PROXY="https://koettelmann-proxy.m3-jost.workers.dev/?url=";
+let recoveryRunning=false, wdrCheckedThisStart=false;
+function normalizedAudio(url) {
+  try {
+    const u=new URL(url);
+    return (u.hostname.toLowerCase()+u.pathname).toLowerCase().replace(/\/+/g,"/");
+  } catch(_) {return "";}
+}
+function wdrMediaId(url) {
+  // WDR-MP3s verwenden beispielsweise .../3338780_63399262.mp3.
+  // Nur die eindeutig zuordenbare Medien-ID verwenden, niemals die Bitrate.
+  try {
+    const path=new URL(url).pathname;
+    const match=path.match(/\/(\d{7,})_\d+\.mp3$/i);
+    return match?match[1]:null;
+  } catch(_) {return null;}
+}
+function normalizeName(value){
+  return String(value||"").normalize("NFKD").toLowerCase()
+    .replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim()
+    .replace(/^autohaus kottelmann /,"");
+}
+function germanDate(value){
+  const match=String(value||"").match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  return match?match[3]+"-"+match[2]+"-"+match[1]:"";
+}
+function episodeDate(value){
+  const match=String(value||"").match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?match[1]:"";
+}
+function buildUniqueIndex(keyOf) {
+  const index=new Map();
+  episodes.forEach(ep=>{
+    const key=keyOf(ep);
+    if(!key)return;
+    if(index.has(key))index.set(key,null); // uneindeutige Zuordnung verwerfen
+    else index.set(key,ep);
+  });
+  return index;
+}
+function applyRecoveredHeard(candidates) {
+  if(!candidates.length)return 0;
+  const existing=getCompletedEpisodes();
+  if(!Array.isArray(existing))return 0;
+  const found=new Set(existing.filter(x=>typeof x==="string"));
+  let added=0;
+  for(const ep of candidates){
+    if(!ep?.audioUrl || found.has(ep.audioUrl))continue;
+    found.add(ep.audioUrl);added++;
+  }
+  if(added) {
+    // Ursprüngliche URLs bleiben enthalten; nur eindeutig zugeordnete neue ergänzen.
+    setCompletedEpisodes(Array.from(found));
+    render(currentPage,false);
+  }
+  return added;
+}
+function matchOldAudioByFileId(legacy){
+  const byPath=buildUniqueIndex(ep=>normalizedAudio(ep.audioUrl));
+  const byWdrId=buildUniqueIndex(ep=>wdrMediaId(ep.audioUrl));
+  const matched=[];
+  for(const old of legacy){
+    const path=normalizedAudio(old),id=wdrMediaId(old);
+    const target=(path&&byPath.get(path))||(id&&byWdrId.get(id));
+    if(target)matched.push(target);
+  }
+  return matched;
+}
+function extractWdrEpisodes(doc,legacySet) {
+  const byExact=new Map();
+  const items=[];
+  const wdrRoot=new URL(WDR_ARCHIVE_URL);
+  doc.querySelectorAll(".box").forEach(box=>{
+    const title=box.querySelector("h3 a")?.textContent?.trim();
+    const date=germanDate(box.querySelector(".mediaDate")?.textContent);
+    const audioLink=box.querySelector("a.button.download")||box.querySelector('a[href*=".mp3"]');
+    const href=audioLink?.getAttribute("href");
+    if(!title||!date||!href)return;
+    let url;
+    try {url=new URL(href,wdrRoot).href;}catch(_){return;}
+    if(!legacySet.has(url) && !legacySet.has(normalizedAudio(url)))return;
+    items.push({url,title,date});
+  });
+  return items;
+}
+async function recoverFromWdrPages(oldLinks) {
+  if(wdrCheckedThisStart)return;
+  wdrCheckedThisStart=true;
+  if(!oldLinks.length)return;
+  const byTitleDate=buildUniqueIndex(ep=>normalizeName(ep.title)+"|"+episodeDate(ep.publishDate));
+  const legacySet=new Set([...oldLinks,...oldLinks.map(normalizedAudio)]);
+  const pages=[WDR_ARCHIVE_URL],visited=new Set(),found=[];
+  for(let n=0;pages.length && n<25;n++){
+    const url=pages.shift();
+    if(visited.has(url))continue;
+    visited.add(url);
+    try{
+      const response=await fetch(WDR_PROXY+encodeURIComponent(url),{cache:"no-store"});
+      if(!response.ok)break;
+      const doc=new DOMParser().parseFromString(await response.text(),"text/html");
+      for(const entry of extractWdrEpisodes(doc,legacySet)){
+        const ep=byTitleDate.get(normalizeName(entry.title)+"|"+entry.date);
+        if(ep)found.push(ep);
+      }
+      // Nur die vom WDR selbst angegebenen Audio-Archivseiten verfolgen.
+      doc.querySelectorAll('a[href*="_pageaudio-"]').forEach(link=>{
+        try{
+          const next=new URL(link.getAttribute("href"),url);
+          if(next.origin===new URL(WDR_ARCHIVE_URL).origin &&
+             next.pathname.includes("/autohaus-koettelmann/") &&
+             next.pathname.includes("_pageaudio-") &&
+             !visited.has(next.href) && !pages.includes(next.href))pages.push(next.href);
+        }catch(_){}
+      });
+    } catch(e){console.warn("WDR-Altarchiv derzeit nicht erreichbar",e);break;}
+    if(found.length)applyRecoveredHeard(found.splice(0));
+  }
+}
+async function restoreOldHeard(){
+  if(recoveryRunning||!episodes.length)return;
+  recoveryRunning=true;
+  try{
+    const saved=getCompletedEpisodes();
+    if(!Array.isArray(saved)||!saved.length)return;
+    const current=new Set(episodes.map(ep=>ep.audioUrl).filter(Boolean));
+    const old=saved.filter(url=>typeof url==="string"&&url && !current.has(url));
+    if(!old.length)return;
+    applyRecoveredHeard(matchOldAudioByFileId(old));
+    // WDR-Verzeichnisse können alte Audio-Dateien mit Titel/Datum verknüpfen.
+    // Bei fehlender Zuordnung wird keine Folge vorsorglich als gehört markiert.
+    await recoverFromWdrPages(old);
+  }catch(e){console.warn("Alte Hörmarkierungen konnten nicht vollständig abgeglichen werden",e);}
+  finally{recoveryRunning=false;}
+}
+
 function start(){
   loadSaved();
   createMini();
   if(!showShared())render(1,false);
+  restoreOldHeard();
   refresh();
 }
-window.KoettelmannV63={start,page,syncMini};
+window.KoettelmannV64={start,page,syncMini};
 })();
